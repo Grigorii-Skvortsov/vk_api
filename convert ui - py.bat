@@ -1,0 +1,5 @@
+pyuic5 "C:\GitHub\parsing_inf_from_social_networks\vk_parser\window_main.ui" -x -o "C:\GitHub\parsing_inf_from_social_networks\vk_parser\ui_window_main.py"
+pyuic5 "C:\GitHub\parsing_inf_from_social_networks\vk_parser\widget_friends_get.ui" -x -o "C:\GitHub\parsing_inf_from_social_networks\vk_parser\ui_widget_friends_get.py"
+pyuic5 "C:\GitHub\parsing_inf_from_social_networks\vk_parser\widget_newsfeed_search.ui" -x -o "C:\GitHub\parsing_inf_from_social_networks\vk_parser\ui_widget_newsfeed_search.py"
+pyuic5 "C:\GitHub\parsing_inf_from_social_networks\vk_parser\widget_photos_search.ui" -x -o "C:\GitHub\parsing_inf_from_social_networks\vk_parser\ui_widget_photos_search.py"
+pyuic5 "C:\GitHub\parsing_inf_from_social_networks\vk_parser\widget_groups_getMembers.ui" -x -o "C:\GitHub\parsing_inf_from_social_networks\vk_parser\ui_widget_groups_getMembers.py"
