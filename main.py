@@ -13,6 +13,7 @@ from ui_widget_photos_search import Ui_MainWindow_Photos_Search
 from ui_widget_groups_getMembers import Ui_MainWindow_Groups_GetMembers
 
 global ACCESS_TOKEN, PHOTOS_SEARCH_V, NEWSFEED_SEARCH_V, FRIENDS_GET_V, GROUPS_GETMEMBERS_V, USERS_GET_V, GROUPS_GET_BY_ID_V
+# 'C:/Google Drive/other/token.txt'
 ACCESS_TOKEN = open('C:/Google Drive/other/token.txt').read()  # здесь вы указываете путь к своему токену доступа
 PHOTOS_SEARCH_V = 5.107
 NEWSFEED_SEARCH_V = 5.107
@@ -33,6 +34,8 @@ if True:  # здесь свёрнуты функции делегировани�
             push_button_find(0, searched_object)
         elif searched_object == 'Groups Members':
             push_button_find(0, searched_object)
+        else:
+            main_menu.textBrowser.append('Выберете, что вы хотите искать')
 
 
     def connect_push_button_find_2():
@@ -45,7 +48,8 @@ if True:  # здесь свёрнуты функции делегировани�
             push_button_find(1, searched_object)
         elif searched_object == 'Groups Members':
             push_button_find(1, searched_object)
-
+        else:
+            main_menu.textBrowser.append('Выберете, что вы хотите искать')
 
     # функционал кнопки "clear"
     def connect_push_button_newsfeed_search_clear_1():
@@ -566,13 +570,6 @@ def write_json_in_file(data):
         json.dump(data, file, indent=2, ensure_ascii=False)
 
 
-def test():
-    this_max = min(params_count, total_max)
-    while this_max > 0:
-        this_max = this_max - max_count
-        print(this_max)
-
-
 def main():
     global data, main_menu, friends_get, newsfeed_search, photos_search, groups_getMembers, WidgetFriendsGet, WidgetNewsfeedSearch, WidgetPhotosSearch, WidgetGroupsGetMembers, intersection_set
 
@@ -656,10 +653,11 @@ def main():
     groups_getMembers[1].pushButton_groups_getMembers_clear.clicked.connect(
         connect_push_button_groups_getMembers_clear_2)
     groups_getMembers[1].pushButton_groups_getMembers_save.clicked.connect(connect_push_button_groups_getMembers_save_2)
-    main_menu.textBrowser.append('Програма иницирована и готова к использованию')
+    main_menu.textBrowser.append('Программа "Нюхач" иницирована и готова к использованию')
+    main_menu.textBrowser.append('Версия - Pre-Alpha 0.1')
+    main_menu.textBrowser.append('GNU General Public License v3.0 ')
     sys.exit(app.exec_())  # Run main loop
 
 
 if __name__ == '__main__':
     main()
-    # test()
