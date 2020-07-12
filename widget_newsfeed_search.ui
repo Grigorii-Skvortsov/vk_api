@@ -36,7 +36,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Очистка</string>
+      <string>Clear</string>
      </property>
     </widget>
     <widget class="QGroupBox" name="groupBox_newsfeed_search_time">
@@ -158,7 +158,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Загрузка</string>
+      <string>Load</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_7">
@@ -166,7 +166,7 @@
       <rect>
        <x>20</x>
        <y>20</y>
-       <width>81</width>
+       <width>111</width>
        <height>16</height>
       </rect>
      </property>
@@ -201,7 +201,7 @@
        <rect>
         <x>10</x>
         <y>20</y>
-        <width>111</width>
+        <width>121</width>
         <height>16</height>
        </rect>
       </property>
@@ -224,7 +224,7 @@
        <rect>
         <x>140</x>
         <y>20</y>
-        <width>111</width>
+        <width>121</width>
         <height>16</height>
        </rect>
       </property>

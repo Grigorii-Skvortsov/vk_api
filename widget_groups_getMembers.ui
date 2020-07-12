@@ -104,7 +104,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Загрузка</string>
+      <string>Load</string>
      </property>
     </widget>
     <widget class="QPushButton" name="pushButton_groups_getMembers_clear">
@@ -117,7 +117,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Очистка</string>
+      <string>Clear</string>
      </property>
     </widget>
    </widget>

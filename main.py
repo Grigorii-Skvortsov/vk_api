@@ -1,8 +1,7 @@
 import requests
 import json
 import datetime
-import time
-import csv
+#import time
 from time import sleep  # sleep(1) - заснуть на 1 секунду
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -50,6 +49,7 @@ if True:  # здесь свёрнуты функции делегировани�
             push_button_find(1, searched_object)
         else:
             main_menu.textBrowser.append('Выберете, что вы хотите искать')
+
 
     # функционал кнопки "clear"
     def connect_push_button_newsfeed_search_clear_1():
@@ -153,6 +153,7 @@ if True:  # здесь свёрнуты функции делегировани�
 def push_button_find(i: int, searched_object: str):
     """i - widget number,
     searched_object - what we will looking for"""
+    line_inspector()
     if searched_object == 'Newsfeed':
         WidgetNewsfeedSearch[i].show()
     elif searched_object == 'Photos':
@@ -166,6 +167,7 @@ def push_button_find(i: int, searched_object: str):
 def push_button_something_search_load(i: int, request_type: str):
     """i - widget number
     request_type - type of search"""
+    line_inspector()
     request_status = False
     data[i][request_type] = []
     max_one_count = {  # максимальное количество в запросе за раз
@@ -309,7 +311,18 @@ def push_button_something_search_load(i: int, request_type: str):
         params.update({'count': 1})  # сделаем тестовый запрос на 1
         # сколько вообще необходимо получить?
         sleep(0.34)
-        one_request = requests.get(f"https://api.vk.com/method/{request_type}?", params=params).json()
+        try:
+            one_request = requests.get(f"https://api.vk.com/method/{request_type}?", params=params).json()
+        except:
+            main_menu.textBrowser.append(
+                f"Тестовый запрос '{request_type}' вернул ошибку.\n"
+                f"Это может быть по следующим причинам:\n"
+                f"1. Отсутсвует подсоединение к сети;\n"
+                f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
+                f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
+                f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
+            )
+            return None
         main_menu.textBrowser.append(f"Найдено {one_request['response']['count']} результатов '{request_type}'")
         # выбираем, какой взять верхний предел. Ограничение API или ограничение результатов
         this_total_max_count = one_request['response']['count'] if (total_max_count[request_type] is None) or (
@@ -325,7 +338,18 @@ def push_button_something_search_load(i: int, request_type: str):
         offset = 0  # первый сдвиг равен 0, далее он будет расти на размер запроса
         while this_total_max_count > 0:
             sleep(0.34)
-            request_json = requests.get(f"https://api.vk.com/method/{request_type}?", params=params).json()
+            try:
+                request_json = requests.get(f"https://api.vk.com/method/{request_type}?", params=params).json()
+            except:
+                main_menu.textBrowser.append(
+                    f"В процессе цикла запросов '{request_type}' возникла ошибка.\n"
+                    f"Это может быть по следующим причинам:\n"
+                    f"1. Нестабильное подсоединение к сети;\n"
+                    f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
+                    f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
+                    f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
+                )
+                return None
             offset = offset + count
             if request_type == 'newsfeed.search':
                 params.update({'start_from': offset})
@@ -352,6 +376,7 @@ def push_button_something_search_load(i: int, request_type: str):
 def push_button_something_search_clear(i: int, request_type: str):
     """i - widget number
     request_type - type of search"""
+    line_inspector()
     if request_type == 'newsfeed.search':
         newsfeed_search[i].lineEdit_newsfeed_search_status.setText('Данных нет')
         clearing_lines = [
@@ -403,6 +428,7 @@ def push_button_something_search_clear(i: int, request_type: str):
 def push_button_something_search_save(i: int, request_type: str):
     """i - widget number
     request_type - type of search"""
+    line_inspector()
     status_line = {
         'newsfeed.search': newsfeed_search[i].lineEdit_newsfeed_search_status,
         'photos.search': photos_search[i].lineEdit_photos_search_status,
@@ -428,6 +454,7 @@ def push_button_something_search_save(i: int, request_type: str):
 
 
 def push_button_get_group_id():
+    line_inspector()
     if main_menu.lineEdit_get_group_id_txt_id.text() != '':
         params = {
             'access_token': ACCESS_TOKEN,
@@ -435,11 +462,23 @@ def push_button_get_group_id():
             'group_ids': main_menu.lineEdit_get_group_id_txt_id.text()
         }
         sleep(0.34)
-        main_menu.lineEdit_get_group_id_id.setText(str(requests.get(f"https://api.vk.com/method/groups.getById?",
-                                                                    params=params).json()['response'][0]['id']))
+        try:
+            main_menu.lineEdit_get_group_id_id.setText(str(requests.get(f"https://api.vk.com/method/groups.getById?",
+                                                                        params=params).json()['response'][0]['id']))
+        except:
+            main_menu.textBrowser.append(
+                f"Запрос получеия ID группы '{params['group_ids']}' вернул ошибку.\n"
+                f"Это может быть по следующим причинам:\n"
+                f"1. Отсутсвует подсоединение к сети;\n"
+                f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
+                f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
+                f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
+            )
+            return None
 
 
 def push_button_get_user_id():
+    line_inspector()
     if main_menu.lineEdit_get_user_id_txt_id.text() != '':
         params = {
             'access_token': ACCESS_TOKEN,
@@ -447,39 +486,69 @@ def push_button_get_user_id():
             'user_ids': main_menu.lineEdit_get_user_id_txt_id.text()
         }
         sleep(0.34)
-        main_menu.lineEdit_get_user_id_id.setText(str(requests.get(f"https://api.vk.com/method/users.get?",
-                                                                   params=params).json()['response'][0]['id']))
+        try:
+            main_menu.lineEdit_get_user_id_id.setText(str(requests.get(f"https://api.vk.com/method/users.get?",
+                                                                       params=params).json()['response'][0]['id']))
+        except:
+            main_menu.textBrowser.append(
+                f"Запрос получеия ID пользователя '{params['user_ids']}' вернул ошибку.\n"
+                f"Это может быть по следующим причинам:\n"
+                f"1. Отсутсвует подсоединение к сети;\n"
+                f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
+                f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
+                f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
+            )
+            return None
 
 
 def push_button_find_intersections_find():
+    line_inspector()
     first_file_name = main_menu.lineEdit_find_intersections_file_1.text()
     second_file_name = main_menu.lineEdit_find_intersections_file_2.text()
     if first_file_name != '' and second_file_name != '':
-        with open(first_file_name) as first_file:
-            first_set = set()
-            for line in first_file:
-                first_set.add(line[0:-2])
-        with open(second_file_name) as second_file:
-            second_set = set()
-            for line in second_file:
-                second_set.add(line[0:-2])
+        try:
+            with open(first_file_name) as first_file:
+                first_set = set()
+                for line in first_file:
+                    first_set.add(line[0:-2])
+        except:
+            main_menu.textBrowser.append(
+                f"Файл '{first_file_name}' отсутсвует в директории программы или имеет неподходящий формат.\n"
+                f"Поиск пересечений не выполнен.\n")
+            return None
+        try:
+            with open(second_file_name) as second_file:
+                second_set = set()
+                for line in second_file:
+                    second_set.add(line[0:-2])
+        except:
+            main_menu.textBrowser.append(
+                f"Файл '{second_file_name}' отсутсвует в директории программы или имеет неподходящий формат.\n"
+                f"Поиск пересечений не выполнен.\n")
+            return None
         this_black_list = set()
-        with open('black_list.csv', 'r') as black_list_file:
-            for item in black_list_file:
-                ignor_item = item.replace('\n', '')
-                this_black_list.add(ignor_item)
+        try:
+            with open('black_list.csv', 'r') as black_list_file:
+                for item in black_list_file:
+                    ignor_item = item.replace('\n', '')
+                    this_black_list.add(ignor_item)
+        except:
+            main_menu.textBrowser.append(
+                f"Файл игнорируемых ID 'black_list.csv' отсутсвует в директории программы"
+                f" или имеет неподходящий формат. Поиск пересечений прошёл без фильтрации по чёрному списку.\n")
         global intersection_set
         intersection_set = (first_set & second_set) - this_black_list
         main_menu.textBrowser.append(f"В '{first_file_name}' и '{second_file_name}' найдено {len(intersection_set)} "
-                                     f"пересечений с учётом игнорируемых id из 'black_list.csv'")
+                                     f"пересечений.\n")
+
         main_menu.lineEdit_find_intersections_status.setText('Отфильтрованно')
     else:
+        main_menu.textBrowser.append(f"Впишите в поля полные имена csv-файлов для фильтрации, например 'test.csv'.\n")
         main_menu.lineEdit_find_intersections_status.setText('Укажите файлы!')
 
 
 def push_button_find_intersections_save():
     push_button_find_intersections_find()
-
     global intersection_set
     if intersection_set:
         this_name = f"{main_menu.lineEdit_file_name.text()}_intersections.csv"
@@ -488,25 +557,95 @@ def push_button_find_intersections_save():
                 file.write(str(id).replace('-', '') + '\n')
         main_menu.textBrowser.append(f"{len(intersection_set)} id сохранено в '{this_name}'")
     else:
-        main_menu.textBrowser.append(f"Впишите имена csv-файлов для поиска их пересечений")
+        main_menu.textBrowser.append(f"Впишите в поля полные имена csv-файлов для фильтрации, например 'test.csv'.\n")
         main_menu.lineEdit_find_intersections_status.setText('Нет данных!')
 
 
 def push_button_find_intersections_clear():
+    line_inspector()
     main_menu.lineEdit_find_intersections_file_1.clear()
     main_menu.lineEdit_find_intersections_file_2.clear()
     global intersection_set
     intersection_set = set()
 
 
+def push_button_integration_find():
+    line_inspector()
+    first_file_name = main_menu.lineEdit_integration_file_1.text()
+    second_file_name = main_menu.lineEdit_integration_file_2.text()
+    if first_file_name != '' and second_file_name != '':
+        try:
+            with open(first_file_name) as first_file:
+                first_set = set()
+                for line in first_file:
+                    first_set.add(line[0:-2])
+        except:
+            main_menu.textBrowser.append(
+                f"Файл '{first_file_name}' отсутсвует в директории программы или имеет неподходящий формат.\n"
+                f"Объединение не выполнено.\n")
+            return None
+        try:
+            with open(second_file_name) as second_file:
+                second_set = set()
+                for line in second_file:
+                    second_set.add(line[0:-2])
+        except:
+            main_menu.textBrowser.append(
+                f"Файл '{second_file_name}' отсутсвует в директории программы или имеет неподходящий формат.\n"
+                f"Объединение не выполнено.\n")
+            return None
+        this_black_list = set()
+        try:
+            with open('black_list.csv', 'r') as black_list_file:
+                for item in black_list_file:
+                    ignor_item = item.replace('\n', '')
+                    this_black_list.add(ignor_item)
+        except:
+            main_menu.textBrowser.append(
+                f"Файл игнорируемых ID 'black_list.csv' отсутсвует в директории программы"
+                f" или имеет неподходящий формат. Объединение прошло без фильтрации по чёрному списку.\n")
+        global integration_set
+        integration_set = first_set.union(second_set) - this_black_list
+        main_menu.textBrowser.append(f"Файлы '{first_file_name}' и '{second_file_name}' объединены во множество "
+                                     f"длинной {len(integration_set)} элементов.\n")
+
+        main_menu.lineEdit_integration_status.setText('Объединено')
+    else:
+        main_menu.textBrowser.append(f"Впишите в поля полные имена csv-файлов для объединения, например 'test.csv'.\n")
+        main_menu.lineEdit_integration_status.setText('Укажите файлы!')
+
+
+def push_button_integration_save():
+    push_button_integration_find()
+    global integration_set
+    if integration_set:
+        this_name = f"{main_menu.lineEdit_integration_file_name.text()}_integration.csv"
+        with open(this_name, 'w') as file:
+            for id in integration_set:
+                file.write(str(id).replace('-', '') + '\n')
+        main_menu.textBrowser.append(f"{len(integration_set)} id сохранено в '{this_name}'")
+    else:
+        main_menu.textBrowser.append(f"Впишите в поля полные имена csv-файлов для объединения, например 'test.csv'.\n")
+        main_menu.lineEdit_integration_status.setText('Нет данных!')
+
+
+def push_button_integration_clear():
+    line_inspector()
+    main_menu.lineEdit_integration_file_1.clear()
+    main_menu.lineEdit_integration_file_2.clear()
+    global integration_set
+    integration_set = set()
+
+
 def push_button_black_list_add():
+    line_inspector()
     ignored_object = main_menu.lineEdit_black_list_object.text()
     if ignored_object != '':
         with open('black_list.csv', 'r') as old_black_list_file:
             if (ignored_object + '\n') not in old_black_list_file:
                 with open('black_list.csv', 'r') as old_black_list_file:
                     new_black_list = set()
-                    new_black_list.add(ignored_object+'\n')
+                    new_black_list.add(ignored_object + '\n')
                     for item in old_black_list_file:
                         new_black_list.add(item)
                 with open('black_list.csv', 'w') as new_black_list_file:
@@ -520,6 +659,7 @@ def push_button_black_list_add():
 
 
 def push_button_black_list_seize():
+    line_inspector()
     disignored_object = main_menu.lineEdit_black_list_object.text()
     if disignored_object != '':
         with open('black_list.csv', 'r') as old_black_list_file:
@@ -536,10 +676,11 @@ def push_button_black_list_seize():
             else:
                 main_menu.textBrowser.append(f"'black_list.csv' не содержит в себе {disignored_object}")
     else:
-        main_menu.textBrowser.append(f"Впишите, что вы хотите изъять 'black_list.csv'")
+        main_menu.textBrowser.append(f"Впишите, что вы хотите изъять из 'black_list.csv'")
 
 
 def push_button_black_list_display():
+    line_inspector()
     with open('black_list.csv', 'r') as file:
         what_len = set()
         for item in file:
@@ -548,6 +689,118 @@ def push_button_black_list_display():
     with open('black_list.csv', 'r') as file:
         for item in file:
             main_menu.textBrowser.append(item.replace('\n', ''))
+
+
+def line_inspector():
+    """Функция инспектирует на правильность заполнения полей ввода"""
+    only_integro_lines_list = [  # список полей, где могут быть только целые числа
+        main_menu.lineEdit_black_list_object,
+        main_menu.lineEdit_get_group_id_id,
+        main_menu.lineEdit_get_user_id_id,
+
+        newsfeed_search[0].lineEdit_newsfeed_search_start_time_day,
+        newsfeed_search[0].lineEdit_newsfeed_search_start_time_month,
+        newsfeed_search[0].lineEdit_newsfeed_search_start_time_year,
+        newsfeed_search[0].lineEdit_newsfeed_search_end_time_day,
+        newsfeed_search[0].lineEdit_newsfeed_search_end_time_month,
+        newsfeed_search[0].lineEdit_newsfeed_search_end_time_year,
+        newsfeed_search[1].lineEdit_newsfeed_search_start_time_day,
+        newsfeed_search[1].lineEdit_newsfeed_search_start_time_month,
+        newsfeed_search[1].lineEdit_newsfeed_search_start_time_year,
+        newsfeed_search[1].lineEdit_newsfeed_search_end_time_day,
+        newsfeed_search[1].lineEdit_newsfeed_search_end_time_month,
+        newsfeed_search[1].lineEdit_newsfeed_search_end_time_year,
+
+        photos_search[0].lineEdit_photos_search_radius,
+        photos_search[0].lineEdit_photos_search_end_time_day,
+        photos_search[0].lineEdit_photos_search_end_time_month,
+        photos_search[0].lineEdit_photos_search_end_time_year,
+        photos_search[0].lineEdit_photos_search_start_time_day,
+        photos_search[0].lineEdit_photos_search_start_time_month,
+        photos_search[0].lineEdit_photos_search_start_time_year,
+        photos_search[1].lineEdit_photos_search_radius,
+        photos_search[1].lineEdit_photos_search_end_time_day,
+        photos_search[1].lineEdit_photos_search_end_time_month,
+        photos_search[1].lineEdit_photos_search_end_time_year,
+        photos_search[1].lineEdit_photos_search_start_time_day,
+        photos_search[1].lineEdit_photos_search_start_time_month,
+        photos_search[1].lineEdit_photos_search_start_time_year,
+    ]
+
+    maybe_float_lines_list = [  # список полей, где число может быть десятичным (например - координаты)
+        newsfeed_search[0].lineEdit_newsfeed_search_latitude,
+        newsfeed_search[0].lineEdit_newsfeed_search_longitude,
+        newsfeed_search[1].lineEdit_newsfeed_search_latitude,
+        newsfeed_search[1].lineEdit_newsfeed_search_longitude,
+
+        photos_search[0].lineEdit_photos_search_lat,
+        photos_search[0].lineEdit_photos_search_long,
+        photos_search[1].lineEdit_photos_search_lat,
+        photos_search[1].lineEdit_photos_search_long,
+    ]
+
+    text_lines_without_spaces = [  # список полей, где не должно быть пробелов
+        main_menu.lineEdit_get_group_id_txt_id,
+        main_menu.lineEdit_get_user_id_txt_id,
+
+        main_menu.lineEdit_find_intersections_file_1,
+        main_menu.lineEdit_find_intersections_file_2,
+        main_menu.lineEdit_file_name,
+
+        main_menu.lineEdit_integration_file_1,
+        main_menu.lineEdit_integration_file_2,
+        main_menu.lineEdit_integration_file_name,
+
+        newsfeed_search[0].lineEdit_newsfeed_search_file_name,
+        newsfeed_search[1].lineEdit_newsfeed_search_file_name,
+
+        photos_search[0].lineEdit_photos_search_file_name,
+        photos_search[1].lineEdit_photos_search_file_name,
+
+        groups_getMembers[0].lineEdit_groups_getMembers_id,
+        groups_getMembers[0].lineEdit_groups_getMembers_file_name,
+        groups_getMembers[1].lineEdit_groups_getMembers_id,
+        groups_getMembers[1].lineEdit_groups_getMembers_file_name,
+
+        friends_get[0].lineEdit_friends_get_id,
+        friends_get[0].lineEdit_friends_get_file_name,
+        friends_get[1].lineEdit_friends_get_id,
+        friends_get[1].lineEdit_friends_get_file_name,
+    ]
+
+    text_lines_list = [  # список полей, где может быть только текст (удалятся пробелы)
+        newsfeed_search[0].lineEdit_newsfeed_search_q,
+        newsfeed_search[1].lineEdit_newsfeed_search_q,
+
+        photos_search[0].lineEdit_photos_search_q,
+        photos_search[1].lineEdit_photos_search_q,
+    ]
+
+    for line in only_integro_lines_list:
+        fixed_line = line.text().replace(' ', '').replace(',', '.')  # исправляем те ошибки, что можем
+        if fixed_line.count('.') <= 1 and fixed_line.replace('.', ' ').isdigit():
+            new_value = int(fixed_line)
+            line.setText(str(new_value))
+        elif fixed_line == '':
+            line.setText(str(fixed_line))
+        else:  # чистим поля, если там не числа и не пустота
+            line.clear()
+
+    for line in maybe_float_lines_list:
+        fixed_line = line.text().replace(' ', '').replace(',', '.')  # исправляем те ошибки, что можем
+        if fixed_line.count('.') <= 1 and fixed_line.replace('.', '').isdigit():
+            fixed_line = str(float(fixed_line))
+            line.setText(fixed_line)
+        else:  # чистим поля, если там не числа и не пустота
+            line.clear()
+
+    for line in text_lines_without_spaces:
+        line.setText(line.text().replace(' ', ''))
+
+    for line in text_lines_list:
+        fixed_line = line.text().replace(' ', '')
+        if fixed_line == '':
+            line.clear()
 
 
 def unix_to_y_m_d(unix: int) -> dict:
@@ -571,13 +824,18 @@ def write_json_in_file(data):
 
 
 def main():
-    global data, main_menu, friends_get, newsfeed_search, photos_search, groups_getMembers, WidgetFriendsGet, WidgetNewsfeedSearch, WidgetPhotosSearch, WidgetGroupsGetMembers, intersection_set
+    global data, main_menu, friends_get, newsfeed_search, photos_search, groups_getMembers,\
+        WidgetFriendsGet, WidgetNewsfeedSearch, WidgetPhotosSearch, WidgetGroupsGetMembers,\
+        intersection_set, integration_set
 
     data = [  # данные, полученные в запросе. i - номер виджета, ключ словаря - тип запроса.
         {'newsfeed.search': [], 'photos.search': [], 'friends.get': [], 'groups.getMembers': [], },
         {'newsfeed.search': [], 'photos.search': [], 'friends.get': [], 'groups.getMembers': [], }
     ]
+
     intersection_set = set()
+    integration_set = set()
+
     app = QtWidgets.QApplication(sys.argv)  # Create application - инициализация приложения
     MainWindow = QtWidgets.QMainWindow()  # Create form main menu создание формы окна главного меню
 
@@ -620,6 +878,10 @@ def main():
     main_menu.pushButton_find_intersections_clear.clicked.connect(push_button_find_intersections_clear)
     main_menu.pushButton_find_intersections_save.clicked.connect(push_button_find_intersections_save)
 
+    main_menu.pushButton_integration_find.clicked.connect(push_button_integration_find)
+    main_menu.pushButton_integration_clear.clicked.connect(push_button_integration_clear)
+    main_menu.pushButton_integration_save.clicked.connect(push_button_integration_save)
+
     main_menu.pushButton_black_list_add.clicked.connect(push_button_black_list_add)
     main_menu.pushButton_black_list_seize.clicked.connect(push_button_black_list_seize)
     main_menu.pushButton_black_list_display.clicked.connect(push_button_black_list_display)
@@ -653,9 +915,12 @@ def main():
     groups_getMembers[1].pushButton_groups_getMembers_clear.clicked.connect(
         connect_push_button_groups_getMembers_clear_2)
     groups_getMembers[1].pushButton_groups_getMembers_save.clicked.connect(connect_push_button_groups_getMembers_save_2)
-    main_menu.textBrowser.append('Программа "Нюхач" иницирована и готова к использованию')
-    main_menu.textBrowser.append('Версия - Pre-Alpha 0.1')
-    main_menu.textBrowser.append('GNU General Public License v3.0 ')
+
+    main_menu.textBrowser.append('Программа "Нюхач" иницирована и готова к использованию\n'
+                                 'Версия - Pre-Alpha 0.2\n'
+                                 'Связь с автором - Григорий Скворцов GregoryValeryS@gmail.com\n'
+                                 'GNU General Public License v3.0\n')
+
     sys.exit(app.exec_())  # Run main loop
 
 
