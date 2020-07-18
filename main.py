@@ -1,7 +1,7 @@
 import requests
 import json
 import datetime
-#import time
+# import time
 from time import sleep  # sleep(1) - заснуть на 1 секунду
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -12,8 +12,8 @@ from ui_widget_photos_search import Ui_MainWindow_Photos_Search
 from ui_widget_groups_getMembers import Ui_MainWindow_Groups_GetMembers
 
 global ACCESS_TOKEN, PHOTOS_SEARCH_V, NEWSFEED_SEARCH_V, FRIENDS_GET_V, GROUPS_GETMEMBERS_V, USERS_GET_V, GROUPS_GET_BY_ID_V
-# 'C:/Google Drive/other/token.txt'
-ACCESS_TOKEN = open('C:/Google Drive/other/token.txt').read()  # здесь вы указываете путь к своему токену доступа
+# 'C:/Google Drive/other/token.txt' здесь вы указываете путь к своему токену доступа
+ACCESS_TOKEN = open('C:\Google Drive\program\matirials_for_vk_api/token.txt').read()
 PHOTOS_SEARCH_V = 5.107
 NEWSFEED_SEARCH_V = 5.107
 FRIENDS_GET_V = 5.107
@@ -824,8 +824,8 @@ def write_json_in_file(data):
 
 
 def main():
-    global data, main_menu, friends_get, newsfeed_search, photos_search, groups_getMembers,\
-        WidgetFriendsGet, WidgetNewsfeedSearch, WidgetPhotosSearch, WidgetGroupsGetMembers,\
+    global data, main_menu, friends_get, newsfeed_search, photos_search, groups_getMembers, \
+        WidgetFriendsGet, WidgetNewsfeedSearch, WidgetPhotosSearch, WidgetGroupsGetMembers, \
         intersection_set, integration_set
 
     data = [  # данные, полученные в запросе. i - номер виджета, ключ словаря - тип запроса.
@@ -916,7 +916,7 @@ def main():
         connect_push_button_groups_getMembers_clear_2)
     groups_getMembers[1].pushButton_groups_getMembers_save.clicked.connect(connect_push_button_groups_getMembers_save_2)
 
-    main_menu.textBrowser.append('Программа "Нюхач" иницирована и готова к использованию\n'
+    main_menu.textBrowser.append('Программа "Лоргеном" иницирована и готова к использованию\n'
                                  'Версия - Pre-Alpha 0.2\n'
                                  'Связь с автором - Григорий Скворцов GregoryValeryS@gmail.com\n'
                                  'GNU General Public License v3.0\n')
