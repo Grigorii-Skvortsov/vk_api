@@ -12,8 +12,8 @@ from ui_widget_photos_search import Ui_MainWindow_Photos_Search
 from ui_widget_groups_getMembers import Ui_MainWindow_Groups_GetMembers
 
 global ACCESS_TOKEN, PHOTOS_SEARCH_V, NEWSFEED_SEARCH_V, FRIENDS_GET_V, GROUPS_GETMEMBERS_V, USERS_GET_V, GROUPS_GET_BY_ID_V
-# 'C:/Google Drive/other/token.txt' здесь вы указываете путь к своему токену доступа
-ACCESS_TOKEN = open('C:\Google Drive\program\matirials_for_vk_api/token.txt').read()
+# 'C:/Google Drive/program/matirials_for_vk_api/token.txt' здесь вы указываете путь к своему токену доступа
+ACCESS_TOKEN = open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read()
 PHOTOS_SEARCH_V = 5.107
 NEWSFEED_SEARCH_V = 5.107
 FRIENDS_GET_V = 5.107
