@@ -1,10 +1,10 @@
+import pandas
 import requests
 import json
 import datetime
-# import time
-from time import sleep  # sleep(1) - заснуть на 1 секунду
+from time import sleep, mktime  # sleep(1) - заснуть на 1 секунду
 import sys
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 from ui_window_main import Ui_MainWindow
 from ui_widget_friends_get import Ui_MainWindow_Friends_Get
 from ui_widget_newsfeed_search import Ui_MainWindow_Newsfeed_Search
@@ -14,7 +14,7 @@ from ui_widget_groups_getMembers import Ui_MainWindow_Groups_GetMembers
 global ACCESS_TOKEN, PHOTOS_SEARCH_V, NEWSFEED_SEARCH_V, FRIENDS_GET_V, GROUPS_GETMEMBERS_V, USERS_GET_V, GROUPS_GET_BY_ID_V
 # 'C:/Google Drive/program/matirials_for_vk_api/token.txt' здесь вы указываете путь к своему токену доступа
 ACCESS_TOKEN = open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read()
-PHOTOS_SEARCH_V = 5.107
+PHOTOS_SEARCH_V = 5.126
 NEWSFEED_SEARCH_V = 5.107
 FRIENDS_GET_V = 5.107
 GROUPS_GETMEMBERS_V = 5.107
@@ -184,7 +184,7 @@ def push_button_something_search_load(i: int, request_type: str):
         'groups.getMembers': None,  # нет ограничений?
     }
 
-    params = {'access_token': ACCESS_TOKEN}  # создадим словарь, котоырй будет содержать параметры запросы
+    params = {'access_token': ACCESS_TOKEN}  # создадим словарь, который будет содержать параметры запросы
     # не надо делать так. Делай формиование списка параметров под одним условием
     if request_type == 'newsfeed.search':
         q = newsfeed_search[i].lineEdit_newsfeed_search_q.text()
@@ -236,15 +236,14 @@ def push_button_something_search_load(i: int, request_type: str):
             params.update({'q': q})
             params.update({'offset': 0})  # изначальное смещение относительно первого результата
             params.update({'v': PHOTOS_SEARCH_V})
-            params.update({'extended': 1})  # 1, если необходимо получить информацию о пользователе или сообществе
 
             latitude = photos_search[i].lineEdit_photos_search_lat.text()
             longitude = photos_search[i].lineEdit_photos_search_long.text()
             if latitude != '' and longitude != '':
                 latitude = float(latitude)
                 longitude = float(longitude)
-                params.update({'latitude': latitude})  # северная широта
-                params.update({'longitude': longitude})  # восточная долгота
+                params.update({'lat': latitude})  # северная широта
+                params.update({'long': longitude})  # восточная долгота
 
             radius = photos_search[i].lineEdit_photos_search_radius.text()
             if radius != '':
@@ -364,7 +363,35 @@ def push_button_something_search_load(i: int, request_type: str):
 
             elif request_type == 'photos.search':
                 for item in request_json['response']['items']:
-                    data[i][request_type].append(str(item['owner_id']).replace('-', ''))
+                    if item.get("lat"):
+                        data[i][request_type].append(
+                            {'id': f"https://vk.com/id{str(item['owner_id']).replace('-', '')}",
+                             'first_name': '',
+                             'second_name': '',
+                             'photo': item['sizes'][-1]['url'],
+                             'text': item['text'],
+                             'date': item['date'],
+                             'lat': item["lat"],
+                             'long': item["long"]
+                             })
+                    else:
+                        data[i][request_type].append(
+                            {'id': f"https://vk.com/id{str(item['owner_id']).replace('-', '')}",
+                             'first_name': '',
+                             'second_name': '',
+                             'photo': item['sizes'][-1]['url'],
+                             'text': item['text'],
+                             'date': item['date'],
+                             'lat': '',
+                             'long': ''
+                             })
+                print(data[i][request_type])
+                # преобразовываем обратно в data frame
+                data_frame = pandas.DataFrame.from_dict(data[i][request_type])
+                # перезаписываем файл в excel
+                print(data_frame)
+                data_frame.to_excel('test.xlsx', index=False)
+                print('Успех!')
 
             elif request_type == 'friends.get' or request_type == 'groups.getMembers':
                 for item in request_json['response']['items']:
@@ -444,11 +471,13 @@ def push_button_something_search_save(i: int, request_type: str):
         }
         # создаём/открываем файл .csv:
         this_name = f"{csv_name[request_type]}_{str(i)}{request_type.replace('.', '')}.csv"
-        with open(this_name, 'w') as file:
+
+
+        '''with open(this_name, 'w') as file:
             for id in data[i][request_type]:
                 file.write(id + '\n')
         status_line[request_type].setText('Записано в файл')
-        main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data[i][request_type])} id")
+        main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data[i][request_type])} id")'''
     else:
         push_button_something_search_load(i, request_type)
 
@@ -813,7 +842,7 @@ def unix_to_y_m_d(unix: int) -> dict:
 def y_m_d_to_unix(y: int, m: int, d: int) -> str:
     """Функция получет на вход дату (год, месяц и день) возвращает дату в unix-формате"""
     time_tuple = (y, m, d, 0, 0, 0, 0, 0, 0)
-    return repr(time.mktime(time_tuple))
+    return repr(mktime(time_tuple))
 
 
 def write_json_in_file(data):
@@ -829,8 +858,25 @@ def main():
         intersection_set, integration_set
 
     data = [  # данные, полученные в запросе. i - номер виджета, ключ словаря - тип запроса.
-        {'newsfeed.search': [], 'photos.search': [], 'friends.get': [], 'groups.getMembers': [], },
-        {'newsfeed.search': [], 'photos.search': [], 'friends.get': [], 'groups.getMembers': [], }
+        {'newsfeed.search': [],
+         'photos.search': [
+             {'id': None,
+              'first_name': None,  # нужен подзапрос
+              'second_name': None,  # нужен подзапрос
+              'photo': None,  # ссылка на фото лучшего качества, берём из списка 'size' последний экземпляр
+              'text': None,
+              'date': None,
+              'lat_long': None,
+              }
+         ],
+         'friends.get': [],
+         'groups.getMembers': [],
+         },
+        {'newsfeed.search': [],
+         'photos.search': [],
+         'friends.get': [],
+         'groups.getMembers': [],
+         }
     ]
 
     intersection_set = set()
