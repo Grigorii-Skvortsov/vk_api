@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 import requests
 import json
 import datetime
@@ -12,7 +12,7 @@ from ui_widget_photos_search import Ui_MainWindow_Photos_Search
 from ui_widget_groups_getMembers import Ui_MainWindow_Groups_GetMembers
 
 global ACCESS_TOKEN, PHOTOS_SEARCH_V, NEWSFEED_SEARCH_V, FRIENDS_GET_V, GROUPS_GETMEMBERS_V, USERS_GET_V, GROUPS_GET_BY_ID_V
-# 'C:/Google Drive/program/matirials_for_vk_api/token.txt' здесь вы указываете путь к своему токену доступа
+# open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read() здесь вы указываете путь к своему токену доступа
 ACCESS_TOKEN = open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read()
 PHOTOS_SEARCH_V = 5.126
 NEWSFEED_SEARCH_V = 5.107
@@ -192,7 +192,7 @@ def push_button_something_search_load(i: int, request_type: str):
             q = str(q)
             params.update({'q': q})
             params.update({'v': NEWSFEED_SEARCH_V})
-            params.update({'extended': 1})  # 1, если необходимо получить информацию о пользователе или сообществе
+            params.update({'extended': 0})  # 1, если необходимо получить информацию о пользователе или сообществе
 
             latitude = newsfeed_search[i].lineEdit_newsfeed_search_latitude.text()
             longitude = newsfeed_search[i].lineEdit_newsfeed_search_longitude.text()
@@ -285,6 +285,7 @@ def push_button_something_search_load(i: int, request_type: str):
             user_id = int(user_id)
             params.update({'user_id': user_id})
             params.update({'v': FRIENDS_GET_V})
+            params.update({'fields': 'city, country'})
             request_status = True
             friends_get[i].lineEdit_friends_get_status.setText('Данные выгружены')
         else:
@@ -297,6 +298,7 @@ def push_button_something_search_load(i: int, request_type: str):
             group_id = int(group_id)
             params.update({'group_id': group_id})
             params.update({'v': GROUPS_GETMEMBERS_V})
+            params.update({'fields': 'city, country'})
             request_status = True
             groups_getMembers[i].lineEdit_groups_getMembers_status.setText('Данные выгружены')
         else:
@@ -356,48 +358,87 @@ def push_button_something_search_load(i: int, request_type: str):
                 params.update({'offset': offset})
             main_menu.textBrowser.append(f"Осталось загрузить {this_total_max_count} результатов")
             this_total_max_count = this_total_max_count - count
+            # откроем черный список для фильтрации
+            black_list = open('black_list.csv', 'r').read()
             # записываем данные в переменную
             if request_type == 'newsfeed.search':
-                for profile in request_json['response']['profiles']:
-                    data[i][request_type].append(str(profile['id']).replace('-', ''))
+                for item in request_json['response']['items']:
+                    # какие параметры могут отсутствовать?
+                    this_id = str(item['owner_id']).replace('-', '')
+                    if this_id in black_list:
+                        continue
+                    this_lat = ''
+                    this_long = ''
+                    this_place = ''
+                    if item.get("geo") and item["geo"].get("coordinates"):
+                        if item["geo"].get("coordinates"):
+                            this_lat = item["geo"]["coordinates"].split()[0]
+                            this_long = item["geo"]["coordinates"].split()[1]
+                        if item["geo"].get("place") and item["geo"]["place"].get("title"):
+                            this_place = item["geo"]["place"]["title"]
+                    data[i][request_type].append(
+                        {'id': this_id,
+                         'link': '=HYPERLINK("{}", "{}")'.format(
+                             f"https://vk.com/id{str(item['owner_id']).replace('-', '')}", 'page link'),
+                         'first_name': '',
+                         'last_name': '',
+                         'content': '',
+                         'date': unix_to_d_m_y_str(item['date']),
+                         'lat': this_lat,
+                         'long': this_long,
+                         'place': this_place,
+                         'post_source': ' '.join([item["post_source"][source] for source in item["post_source"]]),
+                         'comments': item["comments"]["count"],
+                         'likes': item["likes"]["count"],
+                         'reposts': item["reposts"]["count"],
+                         'text': item['text']
+                         })
 
             elif request_type == 'photos.search':
                 for item in request_json['response']['items']:
+                    # какие параметры могут отсутствовать?
+                    this_id = str(item['owner_id']).replace('-', '')
+                    if this_id in black_list:
+                        continue
+                    this_lat = ''
+                    this_long = ''
                     if item.get("lat"):
-                        data[i][request_type].append(
-                            {'id': f"https://vk.com/id{str(item['owner_id']).replace('-', '')}",
-                             'first_name': '',
-                             'second_name': '',
-                             'photo': item['sizes'][-1]['url'],
-                             'text': item['text'],
-                             'date': item['date'],
-                             'lat': item["lat"],
-                             'long': item["long"]
-                             })
-                    else:
-                        data[i][request_type].append(
-                            {'id': f"https://vk.com/id{str(item['owner_id']).replace('-', '')}",
-                             'first_name': '',
-                             'second_name': '',
-                             'photo': item['sizes'][-1]['url'],
-                             'text': item['text'],
-                             'date': item['date'],
-                             'lat': '',
-                             'long': ''
-                             })
-                print(data[i][request_type])
-                # преобразовываем обратно в data frame
-                data_frame = pandas.DataFrame.from_dict(data[i][request_type])
-                # перезаписываем файл в excel
-                print(data_frame)
-                data_frame.to_excel('test.xlsx', index=False)
-                print('Успех!')
+                        this_lat = item["lat"]
+                        this_long = item["long"]
+                    data[i][request_type].append(
+                        {'id': this_id,
+                         'link': '=HYPERLINK("{}", "{}")'.format(
+                             f"https://vk.com/id{str(item['owner_id']).replace('-', '')}", 'page link'),
+                         'first_name': '',
+                         'last_name': '',
+                         'content': '=HYPERLINK("{}", "{}")'.format(str(item['sizes'][-1]['url']), 'photo link'),
+                         'date': unix_to_d_m_y_str(item['date']),
+                         'lat': this_lat,
+                         'long': this_long,
+                         'text': item['text']
+                         })
 
             elif request_type == 'friends.get' or request_type == 'groups.getMembers':
                 for item in request_json['response']['items']:
-                    data[i][request_type].append(str(item).replace('-', ''))
-        main_menu.textBrowser.append(
-            f"{len(data[i][request_type])} id пользователей без доп.материалов готово к сохранению")
+                    this_id = str(item['id']).replace('-', '')
+                    if this_id in black_list:
+                        continue
+                    this_country = ''
+                    this_city = ''
+                    if item.get("country"):
+                        this_country = item['country']['title']
+                        if item.get("city"):
+                            this_city = item['city']['title']
+                    data[i][request_type].append(
+                        {'id': this_id,
+                         'link': '=HYPERLINK("{}", "{}")'.format(
+                             f"https://vk.com/id{str(item['id']).replace('-', '')}", 'page link'),
+                         'first_name': item['first_name'],
+                         'last_name': item['last_name'],
+                         'country': this_country,
+                         'city': this_city,
+                         })
+        main_menu.textBrowser.append(f"{len(data[i][request_type])} результатов поиска загружено. Сохранить?")
 
 
 def push_button_something_search_clear(i: int, request_type: str):
@@ -469,15 +510,14 @@ def push_button_something_search_save(i: int, request_type: str):
             'friends.get': friends_get[i].lineEdit_friends_get_file_name.text(),
             'groups.getMembers': groups_getMembers[i].lineEdit_groups_getMembers_file_name.text(),
         }
-        # создаём/открываем файл .csv:
-        this_name = f"{csv_name[request_type]}_{str(i)}{request_type.replace('.', '')}.csv"
 
+        this_name = f"{csv_name[request_type]}_{str(i)}{request_type.replace('.', '')}.xlsx"
 
-        '''with open(this_name, 'w') as file:
-            for id in data[i][request_type]:
-                file.write(id + '\n')
+        data_frame = pd.DataFrame.from_dict(data[i][request_type])  # преобразовываем в data frame
+        data_frame.to_excel(this_name, index=False)  # перезаписываем файл в excel
+
         status_line[request_type].setText('Записано в файл')
-        main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data[i][request_type])} id")'''
+        main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data[i][request_type])} id")
     else:
         push_button_something_search_load(i, request_type)
 
@@ -532,6 +572,7 @@ def push_button_get_user_id():
 
 def push_button_find_intersections_find():
     line_inspector()
+    pass
     first_file_name = main_menu.lineEdit_find_intersections_file_1.text()
     second_file_name = main_menu.lineEdit_find_intersections_file_2.text()
     if first_file_name != '' and second_file_name != '':
@@ -577,6 +618,7 @@ def push_button_find_intersections_find():
 
 
 def push_button_find_intersections_save():
+    pass
     push_button_find_intersections_find()
     global intersection_set
     if intersection_set:
@@ -600,6 +642,7 @@ def push_button_find_intersections_clear():
 
 def push_button_integration_find():
     line_inspector()
+    pass
     first_file_name = main_menu.lineEdit_integration_file_1.text()
     second_file_name = main_menu.lineEdit_integration_file_2.text()
     if first_file_name != '' and second_file_name != '':
@@ -646,6 +689,7 @@ def push_button_integration_find():
 
 def push_button_integration_save():
     push_button_integration_find()
+    pass
     global integration_set
     if integration_set:
         this_name = f"{main_menu.lineEdit_integration_file_name.text()}_integration.csv"
@@ -839,6 +883,11 @@ def unix_to_y_m_d(unix: int) -> dict:
             'd': datetime.datetime.fromtimestamp(unix).strftime('%d')}
 
 
+def unix_to_d_m_y_str(unix: int) -> str:
+    """Функция получет на вход время в unix-формате, возвращает словарь с годом, месяцем и днём"""
+    return f"{datetime.datetime.fromtimestamp(unix).strftime('%d')}.{datetime.datetime.fromtimestamp(unix).strftime('%m')}.{datetime.datetime.fromtimestamp(unix).strftime('%Y')[2:]} "
+
+
 def y_m_d_to_unix(y: int, m: int, d: int) -> str:
     """Функция получет на вход дату (год, месяц и день) возвращает дату в unix-формате"""
     time_tuple = (y, m, d, 0, 0, 0, 0, 0, 0)
@@ -858,25 +907,8 @@ def main():
         intersection_set, integration_set
 
     data = [  # данные, полученные в запросе. i - номер виджета, ключ словаря - тип запроса.
-        {'newsfeed.search': [],
-         'photos.search': [
-             {'id': None,
-              'first_name': None,  # нужен подзапрос
-              'second_name': None,  # нужен подзапрос
-              'photo': None,  # ссылка на фото лучшего качества, берём из списка 'size' последний экземпляр
-              'text': None,
-              'date': None,
-              'lat_long': None,
-              }
-         ],
-         'friends.get': [],
-         'groups.getMembers': [],
-         },
-        {'newsfeed.search': [],
-         'photos.search': [],
-         'friends.get': [],
-         'groups.getMembers': [],
-         }
+        {'newsfeed.search': [], 'photos.search': [], 'friends.get': [], 'groups.getMembers': []},
+        {'newsfeed.search': [], 'photos.search': [], 'friends.get': [], 'groups.getMembers': []}
     ]
 
     intersection_set = set()
@@ -963,7 +995,7 @@ def main():
     groups_getMembers[1].pushButton_groups_getMembers_save.clicked.connect(connect_push_button_groups_getMembers_save_2)
 
     main_menu.textBrowser.append('Программа "Лоргеном" иницирована и готова к использованию\n'
-                                 'Версия - Pre-Alpha 0.2\n'
+                                 'Версия - Alpha 0.1\n'
                                  'Связь с автором - Григорий Скворцов GregoryValeryS@gmail.com\n'
                                  'GNU General Public License v3.0\n')
 

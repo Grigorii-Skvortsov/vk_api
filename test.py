@@ -1,7 +1,5 @@
-import pandas as pd
-
-df1 = pd.DataFrame([['a', 'b'], ['c', 'd']],
-                   index=['row 1', 'row 2'],
-                   columns=['col 1', 'col 2'])
-print(df1)
-df1.to_excel("test.xlsx")
+for i in range(10):
+    for j in range(10):
+        if j in [1, 2, 3, 4, 5, 6, 8, 9]:
+            continue
+        print(i, j)
