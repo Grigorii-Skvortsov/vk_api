@@ -1,9 +1,8 @@
-import pandas as pd
-import requests
-import json
-import datetime
+from pandas import DataFrame
+from requests import get
+from datetime import datetime
 from time import sleep, mktime  # sleep(1) - заснуть на 1 секунду
-import sys
+from sys import argv as sys_argv, exit as sys_exit
 from PyQt5 import QtWidgets
 from ui_window_main import Ui_MainWindow
 from ui_widget_friends_get import Ui_MainWindow_Friends_Get
@@ -313,7 +312,7 @@ def push_button_something_search_load(i: int, request_type: str):
         # сколько вообще необходимо получить?
         sleep(0.34)
         try:
-            one_request = requests.get(f"https://api.vk.com/method/{request_type}?", params=params).json()
+            one_request = get(f"https://api.vk.com/method/{request_type}?", params=params).json()
         except:
             main_menu.textBrowser.append(
                 f"Тестовый запрос '{request_type}' вернул ошибку.\n"
@@ -340,7 +339,7 @@ def push_button_something_search_load(i: int, request_type: str):
         while this_total_max_count > 0:
             sleep(0.34)
             try:
-                request_json = requests.get(f"https://api.vk.com/method/{request_type}?", params=params).json()
+                request_json = get(f"https://api.vk.com/method/{request_type}?", params=params).json()
             except:
                 main_menu.textBrowser.append(
                     f"В процессе цикла запросов '{request_type}' возникла ошибка.\n"
@@ -513,7 +512,7 @@ def push_button_something_search_save(i: int, request_type: str):
 
         this_name = f"{csv_name[request_type]}_{str(i)}{request_type.replace('.', '')}.xlsx"
 
-        data_frame = pd.DataFrame.from_dict(data[i][request_type])  # преобразовываем в data frame
+        data_frame = DataFrame.from_dict(data[i][request_type])  # преобразовываем в data frame
         data_frame.to_excel(this_name, index=False)  # перезаписываем файл в excel
 
         status_line[request_type].setText('Записано в файл')
@@ -532,8 +531,8 @@ def push_button_get_group_id():
         }
         sleep(0.34)
         try:
-            main_menu.lineEdit_get_group_id_id.setText(str(requests.get(f"https://api.vk.com/method/groups.getById?",
-                                                                        params=params).json()['response'][0]['id']))
+            main_menu.lineEdit_get_group_id_id.setText(str(get(f"https://api.vk.com/method/groups.getById?",
+                                                               params=params).json()['response'][0]['id']))
         except:
             main_menu.textBrowser.append(
                 f"Запрос получеия ID группы '{params['group_ids']}' вернул ошибку.\n"
@@ -556,8 +555,8 @@ def push_button_get_user_id():
         }
         sleep(0.34)
         try:
-            main_menu.lineEdit_get_user_id_id.setText(str(requests.get(f"https://api.vk.com/method/users.get?",
-                                                                       params=params).json()['response'][0]['id']))
+            main_menu.lineEdit_get_user_id_id.setText(str(get(f"https://api.vk.com/method/users.get?",
+                                                              params=params).json()['response'][0]['id']))
         except:
             main_menu.textBrowser.append(
                 f"Запрос получеия ID пользователя '{params['user_ids']}' вернул ошибку.\n"
@@ -876,29 +875,15 @@ def line_inspector():
             line.clear()
 
 
-def unix_to_y_m_d(unix: int) -> dict:
-    """Функция получет на вход время в unix-формате, возвращает словарь с годом, месяцем и днём"""
-    return {'y': datetime.datetime.fromtimestamp(unix).strftime('%Y'),
-            'm': datetime.datetime.fromtimestamp(unix).strftime('%m'),
-            'd': datetime.datetime.fromtimestamp(unix).strftime('%d')}
-
-
 def unix_to_d_m_y_str(unix: int) -> str:
     """Функция получет на вход время в unix-формате, возвращает словарь с годом, месяцем и днём"""
-    return f"{datetime.datetime.fromtimestamp(unix).strftime('%d')}.{datetime.datetime.fromtimestamp(unix).strftime('%m')}.{datetime.datetime.fromtimestamp(unix).strftime('%Y')[2:]} "
+    return f"{datetime.fromtimestamp(unix).strftime('%d')}.{datetime.fromtimestamp(unix).strftime('%m')}.{datetime.fromtimestamp(unix).strftime('%Y')[2:]} "
 
 
 def y_m_d_to_unix(y: int, m: int, d: int) -> str:
     """Функция получет на вход дату (год, месяц и день) возвращает дату в unix-формате"""
     time_tuple = (y, m, d, 0, 0, 0, 0, 0, 0)
     return repr(mktime(time_tuple))
-
-
-def write_json_in_file(data):
-    """функция получет json-данные и записывает их в файл data.json"""
-    with open('data.json', 'w') as file:  # создаём/открываем файл data
-        # и сохраняем данные файла в переменную file
-        json.dump(data, file, indent=2, ensure_ascii=False)
 
 
 def main():
@@ -914,7 +899,7 @@ def main():
     intersection_set = set()
     integration_set = set()
 
-    app = QtWidgets.QApplication(sys.argv)  # Create application - инициализация приложения
+    app = QtWidgets.QApplication(sys_argv)  # Create application - инициализация приложения
     MainWindow = QtWidgets.QMainWindow()  # Create form main menu создание формы окна главного меню
 
     friends_get = []
@@ -994,12 +979,12 @@ def main():
         connect_push_button_groups_getMembers_clear_2)
     groups_getMembers[1].pushButton_groups_getMembers_save.clicked.connect(connect_push_button_groups_getMembers_save_2)
 
-    main_menu.textBrowser.append('Программа "Лоргеном" иницирована и готова к использованию\n'
-                                 'Версия - Alpha 0.1\n'
+    main_menu.textBrowser.append('Программа "Lorgenom" иницирована и готова к использованию\n'
+                                 'Версия - Alpha 0.2\n'
                                  'Связь с автором - Григорий Скворцов GregoryValeryS@gmail.com\n'
                                  'GNU General Public License v3.0\n')
 
-    sys.exit(app.exec_())  # Run main loop
+    sys_exit(app.exec_())  # Run main loop
 
 
 if __name__ == '__main__':

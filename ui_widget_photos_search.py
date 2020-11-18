@@ -116,7 +116,7 @@ class Ui_MainWindow_Photos_Search(object):
         self.label.setText(_translate("MainWindow_Photos_Search", "Строка запроса"))
         self.groupBox_photos_search_geotag.setTitle(_translate("MainWindow_Photos_Search", "Геотаг"))
         self.label_2.setText(_translate("MainWindow_Photos_Search", "N-широта д.дробь"))
-        self.label_3.setText(_translate("MainWindow_Photos_Search", "W-долгота д.дробь"))
+        self.label_3.setText(_translate("MainWindow_Photos_Search", "E-долгота д.дробь"))
         self.label_5.setText(_translate("MainWindow_Photos_Search", "Радиус, м"))
         self.lineEdit_photos_search_status.setText(_translate("MainWindow_Photos_Search", "Данных нет"))
         self.pushButton_photos_search_save.setText(_translate("MainWindow_Photos_Search", "Save"))

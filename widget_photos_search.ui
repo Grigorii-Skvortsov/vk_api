@@ -242,7 +242,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>W-долгота д.дробь</string>
+       <string>E-долгота д.дробь</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="lineEdit_photos_search_radius">
