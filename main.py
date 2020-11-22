@@ -912,7 +912,7 @@ def main():
     WidgetPhotosSearch = []
     WidgetGroupsGetMembers = []
 
-    for i in range(0, 2):  # создаём виджеты NPC от 0 до 1 (две штуки), возможно, потом понадобится больше.
+    for i in range(0, 2):  # создаём виджеты от 0 до 1 (две штуки)
         friends_get.append(Ui_MainWindow_Friends_Get())
         newsfeed_search.append(Ui_MainWindow_Newsfeed_Search())
         photos_search.append(Ui_MainWindow_Photos_Search())
