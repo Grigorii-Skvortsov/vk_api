@@ -979,8 +979,8 @@ def main():
         connect_push_button_groups_getMembers_clear_2)
     groups_getMembers[1].pushButton_groups_getMembers_save.clicked.connect(connect_push_button_groups_getMembers_save_2)
 
-    main_menu.textBrowser.append('Программа "Lorgenom" иницирована и готова к использованию\n'
-                                 'Версия - Alpha 0.2\n'
+    main_menu.textBrowser.append('Программа "Palantir" иницирована и готова к использованию\n'
+                                 'Версия - Alpha 0.3\n'
                                  'Связь с автором - Григорий Скворцов GregoryValeryS@gmail.com\n'
                                  'GNU General Public License v3.0\n')
 
