@@ -5,8 +5,22 @@ def write_json_in_file(data):
         json.dump(data, file, indent=2, ensure_ascii=False)
 
 
+def unix_to_d_m_y_str(unix: int) -> str:
+    """Функция получет на вход время в unix-формате, возвращает словарь с годом, месяцем и днём"""
+    return f"{datetime.fromtimestamp(unix).strftime('%d')}.{datetime.fromtimestamp(unix).strftime('%m')}.{datetime.fromtimestamp(unix).strftime('%Y')[2:]} "
+
+
 def unix_to_y_m_d(unix: int) -> dict:
     """Функция получет на вход время в unix-формате, возвращает словарь с годом, месяцем и днём"""
     return {'y': datetime.datetime.fromtimestamp(unix).strftime('%Y'),
             'm': datetime.datetime.fromtimestamp(unix).strftime('%m'),
             'd': datetime.datetime.fromtimestamp(unix).strftime('%d')}
+
+
+d= {
+    '1': 23,
+    '2': 42
+}
+
+for i in d:
+    print(i)

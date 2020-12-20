@@ -169,7 +169,7 @@ def push_button_something_search_load(i: int, request_type: str):
     line_inspector()
     request_status = False
     data[i][request_type] = []
-    max_one_count = {  # максимальное количество в запросе за раз
+    max_one_count = {  # максимальное количество в запросов за раз
         'newsfeed.search': 200,
         'photos.search': 1000,
         'friends.get': 10000,
@@ -305,6 +305,7 @@ def push_button_something_search_load(i: int, request_type: str):
             main_menu.textBrowser.append('Для поиска по группам необходимо указать ID группы')
 
     # сформируем сам запрос
+
     if request_status:
         # ответ имеет параметр "count", по которому можно определить количество резльтатов вообще,
         # и на основании этого и total_max_count (потолка по API) нужно выбрать "count" и локальный потолок
@@ -323,6 +324,7 @@ def push_button_something_search_load(i: int, request_type: str):
                 f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
             )
             return None
+
         main_menu.textBrowser.append(f"Найдено {one_request['response']['count']} результатов '{request_type}'")
         # выбираем, какой взять верхний предел. Ограничение API или ограничение результатов
         this_total_max_count = one_request['response']['count'] if (total_max_count[request_type] is None) or (
@@ -335,7 +337,18 @@ def push_button_something_search_load(i: int, request_type: str):
         count = max_one_count[request_type] if this_total_max_count >= max_one_count[
             request_type] else this_total_max_count
         params.update({'count': count})
+
         offset = 0  # первый сдвиг равен 0, далее он будет расти на размер запроса
+
+        # откроем черный список для фильтрации
+        try:
+            black_list = set(open('black_list.csv', 'r').read().split('\n'))
+        except:
+            main_menu.textBrowser.append(
+                "Фильрация ID не была совершена. 'black_list.csv' не найден, "
+                "создайте файл 'black_list.csv' в той же директории, что и Palantir.exe. ")
+            black_list = set()
+
         while this_total_max_count > 0:
             sleep(0.34)
             try:
@@ -357,8 +370,7 @@ def push_button_something_search_load(i: int, request_type: str):
                 params.update({'offset': offset})
             main_menu.textBrowser.append(f"Осталось загрузить {this_total_max_count} результатов")
             this_total_max_count = this_total_max_count - count
-            # откроем черный список для фильтрации
-            black_list = open('black_list.csv', 'r').read()
+
             # записываем данные в переменную
             if request_type == 'newsfeed.search':
                 for item in request_json['response']['items']:
@@ -375,6 +387,15 @@ def push_button_something_search_load(i: int, request_type: str):
                             this_long = item["geo"]["coordinates"].split()[1]
                         if item["geo"].get("place") and item["geo"]["place"].get("title"):
                             this_place = item["geo"]["place"]["title"]
+
+                    post_source = ' '
+                    for key in item["post_source"]:
+                        if type(item["post_source"][key]) == str:
+                            post_source += ' ' + item["post_source"][key]
+                        if type(item["post_source"][key]) == dict:
+                            for sub_key in item["post_source"][key]:
+                                post_source += ' ' + item["post_source"][key][sub_key]
+
                     data[i][request_type].append(
                         {'id': this_id,
                          'link': '=HYPERLINK("{}", "{}")'.format(
@@ -386,7 +407,7 @@ def push_button_something_search_load(i: int, request_type: str):
                          'lat': this_lat,
                          'long': this_long,
                          'place': this_place,
-                         'post_source': ' '.join([item["post_source"][source] for source in item["post_source"]]),
+                         'post_source': post_source,
                          'comments': item["comments"]["count"],
                          'likes': item["likes"]["count"],
                          'reposts': item["reposts"]["count"],
@@ -437,6 +458,7 @@ def push_button_something_search_load(i: int, request_type: str):
                          'country': this_country,
                          'city': this_city,
                          })
+
         main_menu.textBrowser.append(f"{len(data[i][request_type])} результатов поиска загружено. Сохранить?")
 
 
@@ -503,20 +525,25 @@ def push_button_something_search_save(i: int, request_type: str):
         'groups.getMembers': groups_getMembers[i].lineEdit_groups_getMembers_status,
     }
     if len(data[i][request_type]) > 0:
-        csv_name = {
+        file_name = {
             'newsfeed.search': newsfeed_search[i].lineEdit_newsfeed_search_file_name.text(),
             'photos.search': photos_search[i].lineEdit_photos_search_file_name.text(),
             'friends.get': friends_get[i].lineEdit_friends_get_file_name.text(),
             'groups.getMembers': groups_getMembers[i].lineEdit_groups_getMembers_file_name.text(),
         }
 
-        this_name = f"{csv_name[request_type]}_{str(i)}{request_type.replace('.', '')}.xlsx"
+        this_name = f"{file_name[request_type]}_{str(i)}{request_type.replace('.', '')}.xlsx"
+        try:
+            data_frame = DataFrame.from_dict(data[i][request_type])  # преобразовываем в data frame
+            data_frame.to_excel(this_name, index=False)  # перезаписываем файл в excel
 
-        data_frame = DataFrame.from_dict(data[i][request_type])  # преобразовываем в data frame
-        data_frame.to_excel(this_name, index=False)  # перезаписываем файл в excel
-
-        status_line[request_type].setText('Записано в файл')
-        main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data[i][request_type])} id")
+            status_line[request_type].setText('Записано в файл')
+            main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data[i][request_type])} id")
+        except:
+            status_line[request_type].setText('Ошибка!')
+            main_menu.textBrowser.append(f"При сохранении файла '{this_name}' произошла ошибка!\n"
+                                         f"- Файл не должен быть открыт во время сохранения\n"
+                                         f"- Работа гарантирована на современных версиях Windows")
     else:
         push_button_something_search_load(i, request_type)
 
@@ -712,55 +739,67 @@ def push_button_integration_clear():
 def push_button_black_list_add():
     line_inspector()
     ignored_object = main_menu.lineEdit_black_list_object.text()
-    if ignored_object != '':
-        with open('black_list.csv', 'r') as old_black_list_file:
-            if (ignored_object + '\n') not in old_black_list_file:
-                with open('black_list.csv', 'r') as old_black_list_file:
-                    new_black_list = set()
-                    new_black_list.add(ignored_object + '\n')
-                    for item in old_black_list_file:
-                        new_black_list.add(item)
-                with open('black_list.csv', 'w') as new_black_list_file:
-                    for writing_item in new_black_list:
-                        new_black_list_file.write(writing_item)
-                    main_menu.textBrowser.append(f"{ignored_object} добавлен в 'black_list.csv'")
-            else:
-                main_menu.textBrowser.append(f"'black_list.csv' уже содержит в себе {ignored_object}")
-    else:
-        main_menu.textBrowser.append(f"Впишите, что вы хотите добавить в 'black_list.csv'")
+    try:
+        if ignored_object != '':
+            with open('black_list.csv', 'r') as old_black_list_file:
+                if (ignored_object + '\n') not in old_black_list_file:
+                    with open('black_list.csv', 'r') as old_black_list_file:
+                        new_black_list = set()
+                        new_black_list.add(ignored_object + '\n')
+                        for item in old_black_list_file:
+                            new_black_list.add(item)
+                    with open('black_list.csv', 'w') as new_black_list_file:
+                        for writing_item in new_black_list:
+                            new_black_list_file.write(writing_item)
+                        main_menu.textBrowser.append(f"{ignored_object} добавлен в 'black_list.csv'")
+                else:
+                    main_menu.textBrowser.append(f"'black_list.csv' уже содержит в себе {ignored_object}")
+        else:
+            main_menu.textBrowser.append(f"Впишите, что вы хотите добавить в 'black_list.csv'")
+    except:
+        main_menu.textBrowser.append("'black_list.csv' не найден, создайте файл 'black_list.csv' в той же директории,"
+                                     "что и Palantir.exe")
 
 
 def push_button_black_list_seize():
     line_inspector()
     disignored_object = main_menu.lineEdit_black_list_object.text()
-    if disignored_object != '':
-        with open('black_list.csv', 'r') as old_black_list_file:
-            if (disignored_object + '\n') in old_black_list_file:
-                with open('black_list.csv', 'r') as old_black_list_file:
-                    new_black_list = set()
-                    for item in old_black_list_file:
-                        if item.replace('\n', '') != '\n' and item.replace('\n', '') != disignored_object:
-                            new_black_list.add(item)
-                with open('black_list.csv', 'w') as new_black_list_file:
-                    for writing_item in new_black_list:
-                        new_black_list_file.write(writing_item)
-                main_menu.textBrowser.append(f"{disignored_object} изъят из 'black_list.csv'")
-            else:
-                main_menu.textBrowser.append(f"'black_list.csv' не содержит в себе {disignored_object}")
-    else:
-        main_menu.textBrowser.append(f"Впишите, что вы хотите изъять из 'black_list.csv'")
+    try:
+        if disignored_object != '':
+            with open('black_list.csv', 'r') as old_black_list_file:
+                if (disignored_object + '\n') in old_black_list_file:
+                    with open('black_list.csv', 'r') as old_black_list_file:
+                        new_black_list = set()
+                        for item in old_black_list_file:
+                            if item.replace('\n', '') != '\n' and item.replace('\n', '') != disignored_object:
+                                new_black_list.add(item)
+                    with open('black_list.csv', 'w') as new_black_list_file:
+                        for writing_item in new_black_list:
+                            new_black_list_file.write(writing_item)
+                    main_menu.textBrowser.append(f"{disignored_object} изъят из 'black_list.csv'")
+                else:
+                    main_menu.textBrowser.append(f"'black_list.csv' не содержит в себе {disignored_object}")
+        else:
+            main_menu.textBrowser.append(f"Впишите, что вы хотите изъять из 'black_list.csv'")
+    except:
+        main_menu.textBrowser.append("'black_list.csv' не найден, создайте файл 'black_list.csv' в той же директории,"
+                                     "что и Palantir.exe")
 
 
 def push_button_black_list_display():
     line_inspector()
-    with open('black_list.csv', 'r') as file:
-        what_len = set()
-        for item in file:
-            what_len.add(item)
-    main_menu.textBrowser.append(f"'black_list.csv' содержит {len(what_len)} элементов:")
-    with open('black_list.csv', 'r') as file:
-        for item in file:
-            main_menu.textBrowser.append(item.replace('\n', ''))
+    try:
+        with open('black_list.csv', 'r') as file:
+            what_len = set()
+            for item in file:
+                what_len.add(item)
+        main_menu.textBrowser.append(f"'black_list.csv' содержит {len(what_len)} элементов:")
+        with open('black_list.csv', 'r') as file:
+            for item in file:
+                main_menu.textBrowser.append(item.replace('\n', ''))
+    except:
+        main_menu.textBrowser.append("'black_list.csv' не найден, создайте файл 'black_list.csv' в той же директории,"
+                                     "что и Palantir.exe")
 
 
 def line_inspector():
@@ -980,8 +1019,8 @@ def main():
     groups_getMembers[1].pushButton_groups_getMembers_save.clicked.connect(connect_push_button_groups_getMembers_save_2)
 
     main_menu.textBrowser.append('Программа "Palantir" иницирована и готова к использованию\n'
-                                 'Версия - Alpha 0.3\n'
-                                 'Связь с автором - Григорий Скворцов GregoryValeryS@gmail.com\n'
+                                 'Версия - Alpha 0.4\n'
+                                 'Связь с автором - GregoryValeryS@gmail.com\n'
                                  'GNU General Public License v3.0\n')
 
     sys_exit(app.exec_())  # Run main loop
