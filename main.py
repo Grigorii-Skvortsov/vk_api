@@ -1,551 +1,438 @@
-from pandas import DataFrame
+from pandas import DataFrame, read_excel
 from requests import get
 from datetime import datetime
 from time import sleep, mktime  # sleep(1) - заснуть на 1 секунду
 from sys import argv as sys_argv, exit as sys_exit
 from PyQt5 import QtWidgets
 from ui_window_main import Ui_MainWindow
-from ui_widget_friends_get import Ui_MainWindow_Friends_Get
+from ui_widget_get_users import Ui_MainWindow_Get_Users
 from ui_widget_newsfeed_search import Ui_MainWindow_Newsfeed_Search
 from ui_widget_photos_search import Ui_MainWindow_Photos_Search
-from ui_widget_groups_getMembers import Ui_MainWindow_Groups_GetMembers
 
-global ACCESS_TOKEN, PHOTOS_SEARCH_V, NEWSFEED_SEARCH_V, FRIENDS_GET_V, GROUPS_GETMEMBERS_V, USERS_GET_V, GROUPS_GET_BY_ID_V
+
+global max_one_count, total_max_count, ACCESS_TOKEN, PHOTOS_SEARCH_V, NEWSFEED_SEARCH_V, FRIENDS_GET_V, GROUPS_GETMEMBERS_V, USERS_GET_V, GROUPS_GET_BY_ID_V, USERS_GET_V
+
 # open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read() здесь вы указываете путь к своему токену доступа
 ACCESS_TOKEN = open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read()
+
+max_one_count = {  # максимальное количество в запросов за раз
+    'newsfeed.search': 200,
+    'photos.search': 1000,
+    'friends.get': 10000,
+    'groups.getMembers': 1000,
+}
+
+total_max_count = {  # максимальное количество запросов вообще
+    'newsfeed.search': 1000,
+    'photos.search': 3000,
+    'friends.get': 10000,  # больше 10000 не бывает
+    'groups.getMembers': None,  # нет ограничений?
+}
+
 PHOTOS_SEARCH_V = 5.126
 NEWSFEED_SEARCH_V = 5.107
 FRIENDS_GET_V = 5.107
 GROUPS_GETMEMBERS_V = 5.107
 USERS_GET_V = 5.107
 GROUPS_GET_BY_ID_V = 5.107
+USERS_GET_V = 5.126
 
-if True:  # здесь свёрнуты функции делегирования
-    # опишем фукции кнопок меню, делегирующие задачу в общую функцию с передачей номера окна и типа поиска
-    def connect_push_button_find_1():
-        searched_object = main_menu.comboBox_what_find_1.currentText()
-        if searched_object == 'Newsfeed':
-            push_button_find(0, searched_object)
-        elif searched_object == 'Photos':
-            push_button_find(0, searched_object)
-        elif searched_object == 'Friends':
-            push_button_find(0, searched_object)
-        elif searched_object == 'Groups Members':
-            push_button_find(0, searched_object)
-        else:
-            main_menu.textBrowser.append('Выберете, что вы хотите искать')
+def WidgetUsersGet_show(): WidgetUsersGet.show()
 
 
-    def connect_push_button_find_2():
-        searched_object = main_menu.comboBox_what_find_2.currentText()
-        if searched_object == 'Newsfeed':
-            push_button_find(1, searched_object)
-        elif searched_object == 'Photos':
-            push_button_find(1, searched_object)
-        elif searched_object == 'Friends':
-            push_button_find(1, searched_object)
-        elif searched_object == 'Groups Members':
-            push_button_find(1, searched_object)
-        else:
-            main_menu.textBrowser.append('Выберете, что вы хотите искать')
+def WidgetNewsfeedSearch_show(): WidgetNewsfeedSearch.show()
 
 
-    # функционал кнопки "clear"
-    def connect_push_button_newsfeed_search_clear_1():
-        push_button_something_search_clear(0, 'newsfeed.search')
+def WidgetPhotosSearch_show(): WidgetPhotosSearch.show()
 
 
-    def connect_push_button_photos_search_clear_1():
-        push_button_something_search_clear(0, 'photos.search')
+def push_button_get_users_load():
+    params = {'access_token': ACCESS_TOKEN}
+    id = users_get.lineEdit_get_users_id.text()
+
+    if id != '' and users_get.radioButton_user.isChecked():
+        user_id = int(id)
+        params.update({'user_id': user_id})
+        params.update({'v': FRIENDS_GET_V})
+        params.update({'fields': 'city, country'})
+        users_get.lineEdit_get_users_status.setText('Данные выгружены')
+
+        push_button_something_load('friends.get', params)
+
+    elif id != '' and users_get.radioButton_group.isChecked():
+
+        group_id = int(id)
+        params.update({'group_id': group_id})
+        params.update({'v': GROUPS_GETMEMBERS_V})
+        params.update({'fields': 'city, country'})
+        users_get.lineEdit_get_users_status.setText('Данные выгружены')
+
+        push_button_something_load('groups.getMembers', params)
+
+    else:
+        users_get.lineEdit_get_users_status.setText('Ошибка запроса')
+        if users_get.radioButton_group.isChecked():
+            main_menu.textBrowser.append('Для поиска по группам необходимо указать ID группы')
+        if users_get.radioButton_user.isChecked():
+            main_menu.textBrowser.append('Для поиска по друзьям необходимо указать ID пользователя')
 
 
-    def connect_push_button_friends_get_clear_1():
-        push_button_something_search_clear(0, 'friends.get')
+def push_button_photos_search_load():
+    params = {'access_token': ACCESS_TOKEN}
+    q = photos_search.lineEdit_photos_search_q.text()
+    latitude = photos_search.lineEdit_photos_search_lat.text()
+    longitude = photos_search.lineEdit_photos_search_long.text()
+    if q != '' or (latitude != '' and longitude != ''):  # в запросе обязательно должен быть текст или координаты
+        q = str(q)
+        params.update({'q': q})
+        params.update({'offset': 0})  # изначальное смещение относительно первого результата
+        params.update({'v': PHOTOS_SEARCH_V})
+
+        latitude = photos_search.lineEdit_photos_search_lat.text()
+        longitude = photos_search.lineEdit_photos_search_long.text()
+        if latitude != '' and longitude != '':
+            latitude = float(latitude)
+            longitude = float(longitude)
+            params.update({'lat': latitude})  # северная широта
+            params.update({'long': longitude})  # восточная долгота
+
+        radius = photos_search.lineEdit_photos_search_radius.text()
+        if radius != '':
+            radius = int(radius)
+            params.update({'radius': radius})
+
+        start_time_day = photos_search.lineEdit_photos_search_start_time_day.text()
+        start_time_month = photos_search.lineEdit_photos_search_start_time_month.text()
+        start_time_year = photos_search.lineEdit_photos_search_start_time_year.text()
+        if start_time_day != '' and start_time_month != '' and start_time_year != '':
+            start_time_day = int(start_time_day)
+            start_time_month = int(start_time_month)
+            start_time_year = int(start_time_year)
+            start_time = y_m_d_to_unix(start_time_year, start_time_month, start_time_day)
+            params.update({'start_time': start_time})
+
+        end_time_day = photos_search.lineEdit_photos_search_end_time_day.text()
+        end_time_month = photos_search.lineEdit_photos_search_end_time_month.text()
+        end_time_year = photos_search.lineEdit_photos_search_end_time_year.text()
+        if end_time_day != '' and end_time_month != '' and end_time_year != '':
+            end_time_day = int(end_time_day)
+            end_time_month = int(end_time_month)
+            end_time_year = int(end_time_year)
+            end_time = y_m_d_to_unix(end_time_year, end_time_month, end_time_day)
+            params.update({'end_time': end_time})
+
+        photos_search.lineEdit_photos_search_status.setText('Данные выгружены')
+
+        push_button_something_load('photos.search', params)
+    else:
+        photos_search.lineEdit_photos_search_status.setText('Ошибка запроса')
+        main_menu.textBrowser.append('Для поиска по фото необходимо указать текст запроса или координаты')
 
 
-    def connect_push_button_groups_getMembers_clear_1():
-        push_button_something_search_clear(0, 'groups.getMembers')
+def push_button_newsfeed_search_load():
+    params = {'access_token': ACCESS_TOKEN}
+    q = newsfeed_search.lineEdit_newsfeed_search_q.text()
+    if q != '':  # в запросе обязательно должен быть текст
+        q = str(q)
+        params.update({'q': q})
+        params.update({'v': NEWSFEED_SEARCH_V})
+        params.update({'extended': 0})  # 1, если необходимо получить информацию о пользователе или сообществе
+
+        latitude = newsfeed_search.lineEdit_newsfeed_search_latitude.text()
+        longitude = newsfeed_search.lineEdit_newsfeed_search_longitude.text()
+        if latitude != '' and longitude != '':
+            latitude = float(latitude)
+            longitude = float(longitude)
+            params.update({'latitude': latitude})  # северная широта
+            params.update({'longitude': longitude})  # восточная долгота
+
+        start_time_day = newsfeed_search.lineEdit_newsfeed_search_start_time_day.text()
+        start_time_month = newsfeed_search.lineEdit_newsfeed_search_start_time_month.text()
+        start_time_year = newsfeed_search.lineEdit_newsfeed_search_start_time_year.text()
+        if start_time_day != '' and start_time_month != '' and start_time_year != '':
+            start_time_day = int(start_time_day)
+            start_time_month = int(start_time_month)
+            start_time_year = int(start_time_year)
+            start_time = y_m_d_to_unix(start_time_year, start_time_month, start_time_day)
+            params.update({'start_time': start_time})
+
+        end_time_day = newsfeed_search.lineEdit_newsfeed_search_end_time_day.text()
+        end_time_month = newsfeed_search.lineEdit_newsfeed_search_end_time_month.text()
+        end_time_year = newsfeed_search.lineEdit_newsfeed_search_end_time_year.text()
+        if end_time_day != '' and end_time_month != '' and end_time_year != '':
+            end_time_day = int(end_time_day)
+            end_time_month = int(end_time_month)
+            end_time_year = int(end_time_year)
+            end_time = y_m_d_to_unix(end_time_year, end_time_month, end_time_day)
+            params.update({'end_time': end_time})
+
+        newsfeed_search.lineEdit_newsfeed_search_status.setText('Данные выгружены')
+        push_button_something_load('newsfeed.search', params)
+    else:
+        newsfeed_search.lineEdit_newsfeed_search_status.setText('Ошибка запроса')
+        main_menu.textBrowser.append('Для поиска по постам необходимо указать текст запроса')
 
 
-    def connect_push_button_newsfeed_search_clear_2():
-        push_button_something_search_clear(1, 'newsfeed.search')
-
-
-    def connect_push_button_photos_search_clear_2():
-        push_button_something_search_clear(1, 'photos.search')
-
-
-    def connect_push_button_friends_get_clear_2():
-        push_button_something_search_clear(1, 'friends.get')
-
-
-    def connect_push_button_groups_getMembers_clear_2():
-        push_button_something_search_clear(1, 'groups.getMembers')
-
-
-    # функционал кнопки "load"
-    def connect_push_button_newsfeed_search_load_1():
-        push_button_something_search_load(0, 'newsfeed.search')
-
-
-    def connect_push_button_photos_search_load_1():
-        push_button_something_search_load(0, 'photos.search')
-
-
-    def connect_push_button_friends_get_load_1():
-        push_button_something_search_load(0, 'friends.get')
-
-
-    def connect_push_button_groups_getMembers_load_1():
-        push_button_something_search_load(0, 'groups.getMembers')
-
-
-    def connect_push_button_newsfeed_search_load_2():
-        push_button_something_search_load(1, 'newsfeed.search')
-
-
-    def connect_push_button_photos_search_load_2():
-        push_button_something_search_load(1, 'photos.search')
-
-
-    def connect_push_button_friends_get_load_2():
-        push_button_something_search_load(1, 'friends.get')
-
-
-    def connect_push_button_groups_getMembers_load_2():
-        push_button_something_search_load(1, 'groups.getMembers')
-
-
-    # функционал кнопки "save"
-    def connect_push_button_newsfeed_search_save_1():
-        push_button_something_search_save(0, 'newsfeed.search')
-
-
-    def connect_push_button_photos_search_save_1():
-        push_button_something_search_save(0, 'photos.search')
-
-
-    def connect_push_button_friends_get_save_1():
-        push_button_something_search_save(0, 'friends.get')
-
-
-    def connect_push_button_groups_getMembers_save_1():
-        push_button_something_search_save(0, 'groups.getMembers')
-
-
-    def connect_push_button_newsfeed_search_save_2():
-        push_button_something_search_save(1, 'newsfeed.search')
-
-
-    def connect_push_button_photos_search_save_2():
-        push_button_something_search_save(1, 'photos.search')
-
-
-    def connect_push_button_friends_get_save_2():
-        push_button_something_search_save(1, 'friends.get')
-
-
-    def connect_push_button_groups_getMembers_save_2():
-        push_button_something_search_save(1, 'groups.getMembers')
-
-
-def push_button_find(i: int, searched_object: str):
-    """i - widget number,
-    searched_object - what we will looking for"""
-    line_inspector()
-    if searched_object == 'Newsfeed':
-        WidgetNewsfeedSearch[i].show()
-    elif searched_object == 'Photos':
-        WidgetPhotosSearch[i].show()
-    elif searched_object == 'Friends':
-        WidgetFriendsGet[i].show()
-    elif searched_object == 'Groups Members':
-        WidgetGroupsGetMembers[i].show()
-
-
-def push_button_something_search_load(i: int, request_type: str):
+def push_button_something_load(request_type: str, params: dict):
     """i - widget number
     request_type - type of search"""
     line_inspector()
-    request_status = False
-    data[i][request_type] = []
-    max_one_count = {  # максимальное количество в запросов за раз
-        'newsfeed.search': 200,
-        'photos.search': 1000,
-        'friends.get': 10000,
-        'groups.getMembers': 1000,
-    }
-
-    total_max_count = {  # максимальное количество запросов вообще
-        'newsfeed.search': 1000,
-        'photos.search': 3000,
-        'friends.get': 10000,  # больше 10000 не бывает
-        'groups.getMembers': None,  # нет ограничений?
-    }
-
-    params = {'access_token': ACCESS_TOKEN}  # создадим словарь, который будет содержать параметры запросы
-    # не надо делать так. Делай формиование списка параметров под одним условием
-    if request_type == 'newsfeed.search':
-        q = newsfeed_search[i].lineEdit_newsfeed_search_q.text()
-        if q != '':  # в запросе обязательно должен быть текст
-            q = str(q)
-            params.update({'q': q})
-            params.update({'v': NEWSFEED_SEARCH_V})
-            params.update({'extended': 0})  # 1, если необходимо получить информацию о пользователе или сообществе
-
-            latitude = newsfeed_search[i].lineEdit_newsfeed_search_latitude.text()
-            longitude = newsfeed_search[i].lineEdit_newsfeed_search_longitude.text()
-            if latitude != '' and longitude != '':
-                latitude = float(latitude)
-                longitude = float(longitude)
-                params.update({'latitude': latitude})  # северная широта
-                params.update({'longitude': longitude})  # восточная долгота
-
-            start_time_day = newsfeed_search[i].lineEdit_newsfeed_search_start_time_day.text()
-            start_time_month = newsfeed_search[i].lineEdit_newsfeed_search_start_time_month.text()
-            start_time_year = newsfeed_search[i].lineEdit_newsfeed_search_start_time_year.text()
-            if start_time_day != '' and start_time_month != '' and start_time_year != '':
-                start_time_day = int(start_time_day)
-                start_time_month = int(start_time_month)
-                start_time_year = int(start_time_year)
-                start_time = y_m_d_to_unix(start_time_year, start_time_month, start_time_day)
-                params.update({'start_time': start_time})
-
-            end_time_day = newsfeed_search[i].lineEdit_newsfeed_search_end_time_day.text()
-            end_time_month = newsfeed_search[i].lineEdit_newsfeed_search_end_time_month.text()
-            end_time_year = newsfeed_search[i].lineEdit_newsfeed_search_end_time_year.text()
-            if end_time_day != '' and end_time_month != '' and end_time_year != '':
-                end_time_day = int(end_time_day)
-                end_time_month = int(end_time_month)
-                end_time_year = int(end_time_year)
-                end_time = y_m_d_to_unix(end_time_year, end_time_month, end_time_day)
-                params.update({'end_time': end_time})
-            request_status = True
-            newsfeed_search[i].lineEdit_newsfeed_search_status.setText('Данные выгружены')
-        else:
-            newsfeed_search[i].lineEdit_newsfeed_search_status.setText('Ошибка запроса')
-            main_menu.textBrowser.append('Для поиска по постам необходимо указать текст запроса')
-
-    elif request_type == 'photos.search':
-        q = photos_search[i].lineEdit_photos_search_q.text()
-        latitude = photos_search[i].lineEdit_photos_search_lat.text()
-        longitude = photos_search[i].lineEdit_photos_search_long.text()
-        if q != '' or (latitude != '' and longitude != ''):  # в запросе обязательно должен быть текст или координаты
-            q = str(q)
-            params.update({'q': q})
-            params.update({'offset': 0})  # изначальное смещение относительно первого результата
-            params.update({'v': PHOTOS_SEARCH_V})
-
-            latitude = photos_search[i].lineEdit_photos_search_lat.text()
-            longitude = photos_search[i].lineEdit_photos_search_long.text()
-            if latitude != '' and longitude != '':
-                latitude = float(latitude)
-                longitude = float(longitude)
-                params.update({'lat': latitude})  # северная широта
-                params.update({'long': longitude})  # восточная долгота
-
-            radius = photos_search[i].lineEdit_photos_search_radius.text()
-            if radius != '':
-                radius = int(radius)
-                params.update({'radius': radius})
-
-            start_time_day = photos_search[i].lineEdit_photos_search_start_time_day.text()
-            start_time_month = photos_search[i].lineEdit_photos_search_start_time_month.text()
-            start_time_year = photos_search[i].lineEdit_photos_search_start_time_year.text()
-            if start_time_day != '' and start_time_month != '' and start_time_year != '':
-                start_time_day = int(start_time_day)
-                start_time_month = int(start_time_month)
-                start_time_year = int(start_time_year)
-                start_time = y_m_d_to_unix(start_time_year, start_time_month, start_time_day)
-                params.update({'start_time': start_time})
-
-            end_time_day = photos_search[i].lineEdit_photos_search_end_time_day.text()
-            end_time_month = photos_search[i].lineEdit_photos_search_end_time_month.text()
-            end_time_year = photos_search[i].lineEdit_photos_search_end_time_year.text()
-            if end_time_day != '' and end_time_month != '' and end_time_year != '':
-                end_time_day = int(end_time_day)
-                end_time_month = int(end_time_month)
-                end_time_year = int(end_time_year)
-                end_time = y_m_d_to_unix(end_time_year, end_time_month, end_time_day)
-                params.update({'end_time': end_time})
-
-            sort = int(photos_search[i].radioButton_photos_search_sort.isChecked())  # 1 - по лайкам, 0 - по дате
-            params.update({'radius': sort})
-
-            request_status = True
-            photos_search[i].lineEdit_photos_search_status.setText('Данные выгружены')
-        else:
-            photos_search[i].lineEdit_photos_search_status.setText('Ошибка запроса')
-            main_menu.textBrowser.append('Для поиска по фото необходимо указать текст запроса или координаты')
-
-    elif request_type == 'friends.get':
-        user_id = friends_get[i].lineEdit_friends_get_id.text()
-        if user_id != '':
-            user_id = int(user_id)
-            params.update({'user_id': user_id})
-            params.update({'v': FRIENDS_GET_V})
-            params.update({'fields': 'city, country'})
-            request_status = True
-            friends_get[i].lineEdit_friends_get_status.setText('Данные выгружены')
-        else:
-            main_menu.textBrowser.append('Для поиска по друзьям необходимо указать ID пользователя')
-            friends_get[i].lineEdit_friends_get_status.setText('Ошибка запроса')
-
-    elif request_type == 'groups.getMembers':
-        group_id = groups_getMembers[i].lineEdit_groups_getMembers_id.text()
-        if group_id != '':
-            group_id = int(group_id)
-            params.update({'group_id': group_id})
-            params.update({'v': GROUPS_GETMEMBERS_V})
-            params.update({'fields': 'city, country'})
-            request_status = True
-            groups_getMembers[i].lineEdit_groups_getMembers_status.setText('Данные выгружены')
-        else:
-            groups_getMembers[i].lineEdit_groups_getMembers_status.setText('Ошибка запроса')
-            main_menu.textBrowser.append('Для поиска по группам необходимо указать ID группы')
+    global data
+    data = []
+    params.update({'access_token': ACCESS_TOKEN})  # создадим словарь, который будет содержать параметры запросы
 
     # сформируем сам запрос
+    # ответ имеет параметр "count", по которому можно определить количество резльтатов вообще,
+    # и на основании этого и total_max_count (потолка по API) нужно выбрать "count" и локальный потолок
+    params.update({'count': 1})  # сделаем тестовый запрос на 1
+    # сколько вообще необходимо получить?
+    sleep(0.34)
+    try:
+        one_request = get(f"https://api.vk.com/method/{request_type}?", params=params).json()
+    except:
+        main_menu.textBrowser.append(
+            f"Тестовый запрос '{request_type}' вернул ошибку.\n"
+            f"Это может быть по следующим причинам:\n"
+            f"1. Отсутсвует подсоединение к сети;\n"
+            f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
+            f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
+            f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
+        )
+        return None
 
-    if request_status:
-        # ответ имеет параметр "count", по которому можно определить количество резльтатов вообще,
-        # и на основании этого и total_max_count (потолка по API) нужно выбрать "count" и локальный потолок
-        params.update({'count': 1})  # сделаем тестовый запрос на 1
-        # сколько вообще необходимо получить?
+    main_menu.textBrowser.append(f"Найдено {one_request['response']['count']} результатов '{request_type}'")
+    # выбираем, какой взять верхний предел. Ограничение API или ограничение результатов
+    this_total_max_count = one_request['response']['count'] if (total_max_count[request_type] is None) or (
+            one_request['response']['count'] <= total_max_count[request_type]) else total_max_count[
+        request_type]
+    main_menu.textBrowser.append(
+        f"С учётом глобального ограничения запросов будет загружено {this_total_max_count} результатов '{request_type}'")
+    # один запрос равен "потолку API", если колчиство доступных результатов больше потолка API,
+    # а если доступных результатов меньше потолка API, то равен количеству доступных результатов
+    count = max_one_count[request_type] if this_total_max_count >= max_one_count[
+        request_type] else this_total_max_count
+    params.update({'count': count})
+
+    offset = 0  # первый сдвиг равен 0, далее он будет расти на размер запроса
+
+    # откроем черный список для фильтрации
+    try:
+        black_list = set(open('black_list.csv', 'r').read().split('\n'))
+    except:
+        main_menu.textBrowser.append(
+            "Фильрация ID не была совершена. 'black_list.csv' не найден, "
+            "создайте файл 'black_list.csv' в той же директории, что и Palantir.exe. ")
+        black_list = set()
+
+    while this_total_max_count > 0:
         sleep(0.34)
         try:
-            one_request = get(f"https://api.vk.com/method/{request_type}?", params=params).json()
+            request_json = get(f"https://api.vk.com/method/{request_type}?", params=params).json()
         except:
             main_menu.textBrowser.append(
-                f"Тестовый запрос '{request_type}' вернул ошибку.\n"
+                f"В процессе цикла запросов '{request_type}' возникла ошибка.\n"
                 f"Это может быть по следующим причинам:\n"
-                f"1. Отсутсвует подсоединение к сети;\n"
+                f"1. Нестабильное подсоединение к сети;\n"
                 f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
                 f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
                 f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
             )
             return None
+        offset = offset + count
+        if request_type == 'newsfeed.search':
+            params.update({'start_from': offset})
+        else:
+            params.update({'offset': offset})
+        main_menu.textBrowser.append(f"Осталось загрузить {this_total_max_count} результатов")
+        this_total_max_count = this_total_max_count - count
 
-        main_menu.textBrowser.append(f"Найдено {one_request['response']['count']} результатов '{request_type}'")
-        # выбираем, какой взять верхний предел. Ограничение API или ограничение результатов
-        this_total_max_count = one_request['response']['count'] if (total_max_count[request_type] is None) or (
-                one_request['response']['count'] <= total_max_count[request_type]) else total_max_count[
-            request_type]
-        main_menu.textBrowser.append(
-            f"С учётом глобального ограничения запросов будет загружено {this_total_max_count} результатов '{request_type}'")
-        # один запрос равен "потолку API", если колчиство доступных результатов больше потолка API,
-        # а если доступных результатов меньше потолка API, то равен количеству доступных результатов
-        count = max_one_count[request_type] if this_total_max_count >= max_one_count[
-            request_type] else this_total_max_count
-        params.update({'count': count})
+        # записываем данные в переменную
+        if request_type == 'newsfeed.search':
+            for item in request_json['response']['items']:
+                # какие параметры могут отсутствовать?
+                this_id = str(item['owner_id']).replace('-', '')
+                if this_id in black_list:
+                    continue
+                this_lat = ''
+                this_long = ''
+                this_place = ''
+                if item.get("geo") and item["geo"].get("coordinates"):
+                    if item["geo"].get("coordinates"):
+                        this_lat = item["geo"]["coordinates"].split()[0]
+                        this_long = item["geo"]["coordinates"].split()[1]
+                    if item["geo"].get("place") and item["geo"]["place"].get("title"):
+                        this_place = item["geo"]["place"]["title"]
 
-        offset = 0  # первый сдвиг равен 0, далее он будет расти на размер запроса
+                post_source = ' '
+                for key in item["post_source"]:
+                    if type(item["post_source"][key]) == str:
+                        post_source += ' ' + item["post_source"][key]
+                    if type(item["post_source"][key]) == dict:
+                        for sub_key in item["post_source"][key]:
+                            post_source += ' ' + item["post_source"][key][sub_key]
 
-        # откроем черный список для фильтрации
-        try:
-            black_list = set(open('black_list.csv', 'r').read().split('\n'))
-        except:
-            main_menu.textBrowser.append(
-                "Фильрация ID не была совершена. 'black_list.csv' не найден, "
-                "создайте файл 'black_list.csv' в той же директории, что и Palantir.exe. ")
-            black_list = set()
+                data.append(
+                    {'id': this_id,
+                     'link': '=HYPERLINK("{}", "{}")'.format(
+                         f"https://vk.com/id{str(item['owner_id']).replace('-', '')}", 'page link'),
+                     'first_name': '',
+                     'last_name': '',
+                     'content': '',
+                     'date': unix_to_d_m_y_str(item['date']),
+                     'lat': this_lat,
+                     'long': this_long,
+                     'place': this_place,
+                     'post_source': post_source,
+                     'comments': item["comments"]["count"],
+                     'likes': item["likes"]["count"],
+                     'reposts': item["reposts"]["count"],
+                     'text': item['text']
+                     })
 
-        while this_total_max_count > 0:
-            sleep(0.34)
-            try:
-                request_json = get(f"https://api.vk.com/method/{request_type}?", params=params).json()
-            except:
-                main_menu.textBrowser.append(
-                    f"В процессе цикла запросов '{request_type}' возникла ошибка.\n"
-                    f"Это может быть по следующим причинам:\n"
-                    f"1. Нестабильное подсоединение к сети;\n"
-                    f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
-                    f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
-                    f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
-                )
-                return None
-            offset = offset + count
-            if request_type == 'newsfeed.search':
-                params.update({'start_from': offset})
-            else:
-                params.update({'offset': offset})
-            main_menu.textBrowser.append(f"Осталось загрузить {this_total_max_count} результатов")
-            this_total_max_count = this_total_max_count - count
+        elif request_type == 'photos.search':
+            for item in request_json['response']['items']:
+                # какие параметры могут отсутствовать?
+                this_id = str(item['owner_id']).replace('-', '')
+                if this_id in black_list:
+                    continue
+                this_lat = ''
+                this_long = ''
+                if item.get("lat"):
+                    this_lat = item["lat"]
+                    this_long = item["long"]
+                data.append(
+                    {'id': this_id,
+                     'link': '=HYPERLINK("{}", "{}")'.format(
+                         f"https://vk.com/id{str(item['owner_id']).replace('-', '')}", 'page link'),
+                     'first_name': '',
+                     'last_name': '',
+                     'content': '=HYPERLINK("{}", "{}")'.format(str(item['sizes'][-1]['url']), 'photo link'),
+                     'date': unix_to_d_m_y_str(item['date']),
+                     'lat': this_lat,
+                     'long': this_long,
+                     'text': item['text']
+                     })
 
-            # записываем данные в переменную
-            if request_type == 'newsfeed.search':
-                for item in request_json['response']['items']:
-                    # какие параметры могут отсутствовать?
-                    this_id = str(item['owner_id']).replace('-', '')
-                    if this_id in black_list:
-                        continue
-                    this_lat = ''
-                    this_long = ''
-                    this_place = ''
-                    if item.get("geo") and item["geo"].get("coordinates"):
-                        if item["geo"].get("coordinates"):
-                            this_lat = item["geo"]["coordinates"].split()[0]
-                            this_long = item["geo"]["coordinates"].split()[1]
-                        if item["geo"].get("place") and item["geo"]["place"].get("title"):
-                            this_place = item["geo"]["place"]["title"]
+        elif request_type == 'friends.get' or request_type == 'groups.getMembers':
+            for item in request_json['response']['items']:
+                this_id = str(item['id']).replace('-', '')
+                if this_id in black_list:
+                    continue
+                this_country = ''
+                this_city = ''
+                if item.get("country"):
+                    this_country = item['country']['title']
+                    if item.get("city"):
+                        this_city = item['city']['title']
+                data.append(
+                    {'id': this_id,
+                     'link': '=HYPERLINK("{}", "{}")'.format(
+                         f"https://vk.com/id{str(item['id']).replace('-', '')}", 'page link'),
+                     'first_name': item['first_name'],
+                     'last_name': item['last_name'],
+                     'country': this_country,
+                     'city': this_city,
+                     })
 
-                    post_source = ' '
-                    for key in item["post_source"]:
-                        if type(item["post_source"][key]) == str:
-                            post_source += ' ' + item["post_source"][key]
-                        if type(item["post_source"][key]) == dict:
-                            for sub_key in item["post_source"][key]:
-                                post_source += ' ' + item["post_source"][key][sub_key]
-
-                    data[i][request_type].append(
-                        {'id': this_id,
-                         'link': '=HYPERLINK("{}", "{}")'.format(
-                             f"https://vk.com/id{str(item['owner_id']).replace('-', '')}", 'page link'),
-                         'first_name': '',
-                         'last_name': '',
-                         'content': '',
-                         'date': unix_to_d_m_y_str(item['date']),
-                         'lat': this_lat,
-                         'long': this_long,
-                         'place': this_place,
-                         'post_source': post_source,
-                         'comments': item["comments"]["count"],
-                         'likes': item["likes"]["count"],
-                         'reposts': item["reposts"]["count"],
-                         'text': item['text']
-                         })
-
-            elif request_type == 'photos.search':
-                for item in request_json['response']['items']:
-                    # какие параметры могут отсутствовать?
-                    this_id = str(item['owner_id']).replace('-', '')
-                    if this_id in black_list:
-                        continue
-                    this_lat = ''
-                    this_long = ''
-                    if item.get("lat"):
-                        this_lat = item["lat"]
-                        this_long = item["long"]
-                    data[i][request_type].append(
-                        {'id': this_id,
-                         'link': '=HYPERLINK("{}", "{}")'.format(
-                             f"https://vk.com/id{str(item['owner_id']).replace('-', '')}", 'page link'),
-                         'first_name': '',
-                         'last_name': '',
-                         'content': '=HYPERLINK("{}", "{}")'.format(str(item['sizes'][-1]['url']), 'photo link'),
-                         'date': unix_to_d_m_y_str(item['date']),
-                         'lat': this_lat,
-                         'long': this_long,
-                         'text': item['text']
-                         })
-
-            elif request_type == 'friends.get' or request_type == 'groups.getMembers':
-                for item in request_json['response']['items']:
-                    this_id = str(item['id']).replace('-', '')
-                    if this_id in black_list:
-                        continue
-                    this_country = ''
-                    this_city = ''
-                    if item.get("country"):
-                        this_country = item['country']['title']
-                        if item.get("city"):
-                            this_city = item['city']['title']
-                    data[i][request_type].append(
-                        {'id': this_id,
-                         'link': '=HYPERLINK("{}", "{}")'.format(
-                             f"https://vk.com/id{str(item['id']).replace('-', '')}", 'page link'),
-                         'first_name': item['first_name'],
-                         'last_name': item['last_name'],
-                         'country': this_country,
-                         'city': this_city,
-                         })
-
-        main_menu.textBrowser.append(f"{len(data[i][request_type])} результатов поиска загружено. Сохранить?")
+    main_menu.textBrowser.append(f"{len(data)} результатов поиска загружено. Сохранить?")
 
 
-def push_button_something_search_clear(i: int, request_type: str):
-    """i - widget number
-    request_type - type of search"""
+def push_button_newsfeed_search_clear():
     line_inspector()
-    if request_type == 'newsfeed.search':
-        newsfeed_search[i].lineEdit_newsfeed_search_status.setText('Данных нет')
-        clearing_lines = [
-            newsfeed_search[i].lineEdit_newsfeed_search_q,
+    newsfeed_search.lineEdit_newsfeed_search_status.setText('Данных нет')
+    clearing_lines = [
+        newsfeed_search.lineEdit_newsfeed_search_q,
 
-            newsfeed_search[i].lineEdit_newsfeed_search_latitude,
-            newsfeed_search[i].lineEdit_newsfeed_search_longitude,
+        newsfeed_search.lineEdit_newsfeed_search_latitude,
+        newsfeed_search.lineEdit_newsfeed_search_longitude,
 
-            newsfeed_search[i].lineEdit_newsfeed_search_start_time_day,
-            newsfeed_search[i].lineEdit_newsfeed_search_start_time_month,
-            newsfeed_search[i].lineEdit_newsfeed_search_start_time_year,
+        newsfeed_search.lineEdit_newsfeed_search_start_time_day,
+        newsfeed_search.lineEdit_newsfeed_search_start_time_month,
+        newsfeed_search.lineEdit_newsfeed_search_start_time_year,
 
-            newsfeed_search[i].lineEdit_newsfeed_search_end_time_day,
-            newsfeed_search[i].lineEdit_newsfeed_search_end_time_month,
-            newsfeed_search[i].lineEdit_newsfeed_search_end_time_year,
-        ]
-    elif request_type == 'photos.search':
-        photos_search[i].lineEdit_photos_search_status.setText('Данных нет')
-        clearing_lines = [
-            photos_search[i].lineEdit_photos_search_q,
-
-            photos_search[i].lineEdit_photos_search_lat,
-            photos_search[i].lineEdit_photos_search_long,
-            photos_search[i].lineEdit_photos_search_radius,
-
-            photos_search[i].lineEdit_photos_search_start_time_day,
-            photos_search[i].lineEdit_photos_search_start_time_month,
-            photos_search[i].lineEdit_photos_search_start_time_year,
-
-            photos_search[i].lineEdit_photos_search_end_time_day,
-            photos_search[i].lineEdit_photos_search_end_time_month,
-            photos_search[i].lineEdit_photos_search_end_time_year,
-        ]
-    elif request_type == 'friends.get':
-        friends_get[i].lineEdit_friends_get_status.setText('Данных нет')
-        clearing_lines = [
-            friends_get[i].lineEdit_friends_get_id,
-        ]
-    elif request_type == 'groups.getMembers':
-        groups_getMembers[i].lineEdit_groups_getMembers_status.setText('Данных нет')
-        clearing_lines = [
-            groups_getMembers[i].lineEdit_groups_getMembers_id,
-        ]
-    data[i][request_type] = []
+        newsfeed_search.lineEdit_newsfeed_search_end_time_day,
+        newsfeed_search.lineEdit_newsfeed_search_end_time_month,
+        newsfeed_search.lineEdit_newsfeed_search_end_time_year,
+    ]
+    data = []
     for line in clearing_lines:
         line.clear()
 
 
-def push_button_something_search_save(i: int, request_type: str):
+def push_button_photos_search_clear():
+    line_inspector()
+    photos_search.lineEdit_photos_search_status.setText('Данных нет')
+    clearing_lines = [
+        photos_search.lineEdit_photos_search_q,
+
+        photos_search.lineEdit_photos_search_lat,
+        photos_search.lineEdit_photos_search_long,
+        photos_search.lineEdit_photos_search_radius,
+
+        photos_search.lineEdit_photos_search_start_time_day,
+        photos_search.lineEdit_photos_search_start_time_month,
+        photos_search.lineEdit_photos_search_start_time_year,
+
+        photos_search.lineEdit_photos_search_end_time_day,
+        photos_search.lineEdit_photos_search_end_time_month,
+        photos_search.lineEdit_photos_search_end_time_year,
+    ]
+    data = []
+    for line in clearing_lines:
+        line.clear()
+
+
+def push_button_get_users_clear():
+    line_inspector()
+    users_get.lineEdit_get_users_status.setText('Данных нет')
+    clearing_lines = [
+        users_get.lineEdit_get_users_id,
+    ]
+    data = []
+    for line in clearing_lines:
+        line.clear()
+
+
+def push_button_get_users_save(): push_button_something_save('get.users')
+
+
+def push_button_photos_search_save(): push_button_something_save('photos.search')
+
+
+def push_button_newsfeed_search_save(): push_button_something_save('newsfeed.search')
+
+
+def push_button_something_save(window_type: str):
     """i - widget number
-    request_type - type of search"""
+    window_type - type of window"""
     line_inspector()
     status_line = {
-        'newsfeed.search': newsfeed_search[i].lineEdit_newsfeed_search_status,
-        'photos.search': photos_search[i].lineEdit_photos_search_status,
-        'friends.get': friends_get[i].lineEdit_friends_get_status,
-        'groups.getMembers': groups_getMembers[i].lineEdit_groups_getMembers_status,
+        'newsfeed.search': newsfeed_search.lineEdit_newsfeed_search_status,
+        'photos.search': photos_search.lineEdit_photos_search_status,
+        'get.users': users_get.lineEdit_get_users_status,
     }
-    if len(data[i][request_type]) > 0:
+
+    if len(data) > 0:
         file_name = {
-            'newsfeed.search': newsfeed_search[i].lineEdit_newsfeed_search_file_name.text(),
-            'photos.search': photos_search[i].lineEdit_photos_search_file_name.text(),
-            'friends.get': friends_get[i].lineEdit_friends_get_file_name.text(),
-            'groups.getMembers': groups_getMembers[i].lineEdit_groups_getMembers_file_name.text(),
+            'newsfeed.search': newsfeed_search.lineEdit_newsfeed_search_file_name.text(),
+            'photos.search': photos_search.lineEdit_photos_search_file_name.text(),
+            'get.users': users_get.lineEdit_get_users_file_name.text(),
         }
 
-        this_name = f"{file_name[request_type]}_{str(i)}{request_type.replace('.', '')}.xlsx"
+        this_name = f"{file_name[window_type]}_{window_type.replace('.', '')}.xlsx"
         try:
-            data_frame = DataFrame.from_dict(data[i][request_type])  # преобразовываем в data frame
+            data_frame = DataFrame.from_dict(data)  # преобразовываем в data frame
             data_frame.to_excel(this_name, index=False)  # перезаписываем файл в excel
 
-            status_line[request_type].setText('Записано в файл')
-            main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data[i][request_type])} id")
+            status_line[window_type].setText('Записано в файл')
+            main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data)} id")
         except:
-            status_line[request_type].setText('Ошибка!')
+            status_line[window_type].setText('Ошибка!')
             main_menu.textBrowser.append(f"При сохранении файла '{this_name}' произошла ошибка!\n"
                                          f"- Файл не должен быть открыт во время сохранения\n"
                                          f"- Работа гарантирована на современных версиях Windows")
     else:
-        push_button_something_search_load(i, request_type)
+        pass
 
 
 def push_button_get_group_id():
@@ -596,7 +483,81 @@ def push_button_get_user_id():
             return None
 
 
-def push_button_find_intersections_find():
+def push_button_user_file_analyze():
+    params = {'access_token': ACCESS_TOKEN,
+              'v': USERS_GET_V}
+
+    file_to_analyze = f'{main_menu.lineEdit_user_file_analyze.text().replace(".xlsx", "")}.xlsx'
+
+    data_dicts = read_excel(file_to_analyze).to_dict(orient='records')
+
+
+    id_set = set()
+    for dict in data_dicts:
+        id_set.add(str(dict['id']))
+
+    lists_id = []
+    list_id = []
+    counter = 0
+    for id in id_set:
+        counter += 1
+        list_id.append(id)
+        if counter == 100:
+            counter = 0
+            lists_id.append(list_id)
+            list_id = []
+    if len(list_id) != 0:
+        lists_id.append(list_id)
+        list_id = []
+    data_dicts = []
+
+    for user_ids in lists_id:
+        params.update({
+            'user_ids': ' ,'.join(user_ids),
+            'fields': 'maiden_name, nickname, sex, bdate, city, country, connections, contacts, site',
+        })
+        sleep(0.34)
+        print('Запрос!')
+        response = get("https://api.vk.com/method/users.get?", params=params).json()
+
+        for user in response['response']:
+
+            data_dicts.append({
+                "id": user["id"],
+                "first_name": user["first_name"],
+                "last_name": user["last_name"],
+                "nickname": user["nickname"] if "nickname" in user else '',
+                "maiden_name": user["maiden_name"] if "maiden_name" in user else '',
+                "is_closed": int(user["is_closed"]) if "is_closed" in user else '',
+
+                "sex": user["sex"] if "sex" in user else '',
+
+                "bdate": user["bdate"] if "bdate" in user else '',
+
+                "city": user["city"]["title"] if "city" in user and "title" in user["city"] else '',
+                "country": user["country"]["title"] if "country" in user and "title" in user["country"] else '',
+
+                "facebook": user["facebook"] if "facebook" in user else '',
+                "facebook_name": user["facebook_name"] if "facebook_name" in user else '',
+                "twitter": user["twitter"] if "twitter" in user else '',
+                "instagram": user["instagram"] if "instagram" in user else '',
+                "skype": user["skype"] if "skype" in user else '',
+                "livejournal": user["livejournal"] if "livejournal" in user else '',
+
+                "mobile_phone": user["mobile_phone"] if "mobile_phone" in user else '',
+                "home_phone": user["home_phone"] if "home_phone" in user else '',
+
+                "site": user["site"] if "site" in user else '',
+            })
+
+    data_frame = DataFrame.from_dict(data_dicts)  # преобразовываем в data frame
+
+    this_name = f'{file_to_analyze.replace(".xlsx", "")}_analyze.xlsx'
+    data_frame.to_excel(this_name, index=False)  # перезаписываем файл в excel
+    main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data_dicts)} записей")
+
+
+def push_button_find_intersections_search():
     line_inspector()
     pass
     first_file_name = main_menu.lineEdit_find_intersections_file_1.text()
@@ -645,7 +606,7 @@ def push_button_find_intersections_find():
 
 def push_button_find_intersections_save():
     pass
-    push_button_find_intersections_find()
+    push_button_find_intersections_search()
     global intersection_set
     if intersection_set:
         this_name = f"{main_menu.lineEdit_file_name.text()}_intersections.csv"
@@ -804,53 +765,40 @@ def push_button_black_list_display():
 
 def line_inspector():
     """Функция инспектирует на правильность заполнения полей ввода"""
-    only_integro_lines_list = [  # список полей, где могут быть только целые числа
+    # список полей, где могут быть только целые числа
+    only_integro_lines_list = [
         main_menu.lineEdit_black_list_object,
         main_menu.lineEdit_get_group_id_id,
         main_menu.lineEdit_get_user_id_id,
 
-        newsfeed_search[0].lineEdit_newsfeed_search_start_time_day,
-        newsfeed_search[0].lineEdit_newsfeed_search_start_time_month,
-        newsfeed_search[0].lineEdit_newsfeed_search_start_time_year,
-        newsfeed_search[0].lineEdit_newsfeed_search_end_time_day,
-        newsfeed_search[0].lineEdit_newsfeed_search_end_time_month,
-        newsfeed_search[0].lineEdit_newsfeed_search_end_time_year,
-        newsfeed_search[1].lineEdit_newsfeed_search_start_time_day,
-        newsfeed_search[1].lineEdit_newsfeed_search_start_time_month,
-        newsfeed_search[1].lineEdit_newsfeed_search_start_time_year,
-        newsfeed_search[1].lineEdit_newsfeed_search_end_time_day,
-        newsfeed_search[1].lineEdit_newsfeed_search_end_time_month,
-        newsfeed_search[1].lineEdit_newsfeed_search_end_time_year,
+        newsfeed_search.lineEdit_newsfeed_search_start_time_day,
+        newsfeed_search.lineEdit_newsfeed_search_start_time_month,
+        newsfeed_search.lineEdit_newsfeed_search_start_time_year,
+        newsfeed_search.lineEdit_newsfeed_search_end_time_day,
+        newsfeed_search.lineEdit_newsfeed_search_end_time_month,
+        newsfeed_search.lineEdit_newsfeed_search_end_time_year,
 
-        photos_search[0].lineEdit_photos_search_radius,
-        photos_search[0].lineEdit_photos_search_end_time_day,
-        photos_search[0].lineEdit_photos_search_end_time_month,
-        photos_search[0].lineEdit_photos_search_end_time_year,
-        photos_search[0].lineEdit_photos_search_start_time_day,
-        photos_search[0].lineEdit_photos_search_start_time_month,
-        photos_search[0].lineEdit_photos_search_start_time_year,
-        photos_search[1].lineEdit_photos_search_radius,
-        photos_search[1].lineEdit_photos_search_end_time_day,
-        photos_search[1].lineEdit_photos_search_end_time_month,
-        photos_search[1].lineEdit_photos_search_end_time_year,
-        photos_search[1].lineEdit_photos_search_start_time_day,
-        photos_search[1].lineEdit_photos_search_start_time_month,
-        photos_search[1].lineEdit_photos_search_start_time_year,
+        photos_search.lineEdit_photos_search_radius,
+        photos_search.lineEdit_photos_search_end_time_day,
+        photos_search.lineEdit_photos_search_end_time_month,
+        photos_search.lineEdit_photos_search_end_time_year,
+        photos_search.lineEdit_photos_search_start_time_day,
+        photos_search.lineEdit_photos_search_start_time_month,
+        photos_search.lineEdit_photos_search_start_time_year,
+
     ]
 
-    maybe_float_lines_list = [  # список полей, где число может быть десятичным (например - координаты)
-        newsfeed_search[0].lineEdit_newsfeed_search_latitude,
-        newsfeed_search[0].lineEdit_newsfeed_search_longitude,
-        newsfeed_search[1].lineEdit_newsfeed_search_latitude,
-        newsfeed_search[1].lineEdit_newsfeed_search_longitude,
+    # список полей, где число может быть десятичным (например - координаты)
+    maybe_float_lines_list = [
+        newsfeed_search.lineEdit_newsfeed_search_latitude,
+        newsfeed_search.lineEdit_newsfeed_search_longitude,
 
-        photos_search[0].lineEdit_photos_search_lat,
-        photos_search[0].lineEdit_photos_search_long,
-        photos_search[1].lineEdit_photos_search_lat,
-        photos_search[1].lineEdit_photos_search_long,
+        photos_search.lineEdit_photos_search_lat,
+        photos_search.lineEdit_photos_search_long,
     ]
 
-    text_lines_without_spaces = [  # список полей, где не должно быть пробелов
+    # список полей, где не должно быть пробелов
+    text_lines_without_spaces = [
         main_menu.lineEdit_get_group_id_txt_id,
         main_menu.lineEdit_get_user_id_txt_id,
 
@@ -862,29 +810,18 @@ def line_inspector():
         main_menu.lineEdit_integration_file_2,
         main_menu.lineEdit_integration_file_name,
 
-        newsfeed_search[0].lineEdit_newsfeed_search_file_name,
-        newsfeed_search[1].lineEdit_newsfeed_search_file_name,
+        newsfeed_search.lineEdit_newsfeed_search_file_name,
 
-        photos_search[0].lineEdit_photos_search_file_name,
-        photos_search[1].lineEdit_photos_search_file_name,
+        photos_search.lineEdit_photos_search_file_name,
 
-        groups_getMembers[0].lineEdit_groups_getMembers_id,
-        groups_getMembers[0].lineEdit_groups_getMembers_file_name,
-        groups_getMembers[1].lineEdit_groups_getMembers_id,
-        groups_getMembers[1].lineEdit_groups_getMembers_file_name,
-
-        friends_get[0].lineEdit_friends_get_id,
-        friends_get[0].lineEdit_friends_get_file_name,
-        friends_get[1].lineEdit_friends_get_id,
-        friends_get[1].lineEdit_friends_get_file_name,
+        users_get.lineEdit_get_users_id,
+        users_get.lineEdit_get_users_file_name,
     ]
 
-    text_lines_list = [  # список полей, где может быть только текст (удалятся пробелы)
-        newsfeed_search[0].lineEdit_newsfeed_search_q,
-        newsfeed_search[1].lineEdit_newsfeed_search_q,
-
-        photos_search[0].lineEdit_photos_search_q,
-        photos_search[1].lineEdit_photos_search_q,
+    # список полей, где может быть только текст (удалятся пробелы)
+    text_lines_list = [
+        newsfeed_search.lineEdit_newsfeed_search_q,
+        photos_search.lineEdit_photos_search_q,
     ]
 
     for line in only_integro_lines_list:
@@ -926,57 +863,24 @@ def y_m_d_to_unix(y: int, m: int, d: int) -> str:
 
 
 def main():
-    global data, main_menu, friends_get, newsfeed_search, photos_search, groups_getMembers, \
-        WidgetFriendsGet, WidgetNewsfeedSearch, WidgetPhotosSearch, WidgetGroupsGetMembers, \
-        intersection_set, integration_set
+    global main_menu, data, \
+        users_get, WidgetUsersGet, \
+        newsfeed_search, WidgetNewsfeedSearch, \
+        photos_search, WidgetPhotosSearch
 
-    data = [  # данные, полученные в запросе. i - номер виджета, ключ словаря - тип запроса.
-        {'newsfeed.search': [], 'photos.search': [], 'friends.get': [], 'groups.getMembers': []},
-        {'newsfeed.search': [], 'photos.search': [], 'friends.get': [], 'groups.getMembers': []}
-    ]
-
-    intersection_set = set()
-    integration_set = set()
-
+    data = []
     app = QtWidgets.QApplication(sys_argv)  # Create application - инициализация приложения
-    MainWindow = QtWidgets.QMainWindow()  # Create form main menu создание формы окна главного меню
-
-    friends_get = []
-    newsfeed_search = []
-    photos_search = []
-    groups_getMembers = []
-
-    WidgetFriendsGet = []
-    WidgetNewsfeedSearch = []
-    WidgetPhotosSearch = []
-    WidgetGroupsGetMembers = []
-
-    for i in range(0, 2):  # создаём виджеты от 0 до 1 (две штуки)
-        friends_get.append(Ui_MainWindow_Friends_Get())
-        newsfeed_search.append(Ui_MainWindow_Newsfeed_Search())
-        photos_search.append(Ui_MainWindow_Photos_Search())
-        groups_getMembers.append(Ui_MainWindow_Groups_GetMembers())
-
-        WidgetFriendsGet.append(QtWidgets.QMainWindow())
-        WidgetNewsfeedSearch.append(QtWidgets.QMainWindow())
-        WidgetPhotosSearch.append(QtWidgets.QMainWindow())
-        WidgetGroupsGetMembers.append(QtWidgets.QMainWindow())
-
-        friends_get[i].setupUi(WidgetFriendsGet[i])
-        newsfeed_search[i].setupUi(WidgetNewsfeedSearch[i])
-        photos_search[i].setupUi(WidgetPhotosSearch[i])
-        groups_getMembers[i].setupUi(WidgetGroupsGetMembers[i])
 
     main_menu = Ui_MainWindow()
+    MainWindow = QtWidgets.QMainWindow()  # Create form main menu создание формы окна главного меню
     main_menu.setupUi(MainWindow)
+
     MainWindow.show()
 
     main_menu.pushButton_get_group_id.clicked.connect(push_button_get_group_id)
     main_menu.pushButton_get_user_id.clicked.connect(push_button_get_user_id)
-    main_menu.pushButton_find_1.clicked.connect(connect_push_button_find_1)
-    main_menu.pushButton_find_2.clicked.connect(connect_push_button_find_2)
 
-    main_menu.pushButton_find_intersections_find.clicked.connect(push_button_find_intersections_find)
+    main_menu.pushButton_find_intersections_search.clicked.connect(push_button_find_intersections_search)
     main_menu.pushButton_find_intersections_clear.clicked.connect(push_button_find_intersections_clear)
     main_menu.pushButton_find_intersections_save.clicked.connect(push_button_find_intersections_save)
 
@@ -988,35 +892,37 @@ def main():
     main_menu.pushButton_black_list_seize.clicked.connect(push_button_black_list_seize)
     main_menu.pushButton_black_list_display.clicked.connect(push_button_black_list_display)
 
-    newsfeed_search[0].pushButton_newsfeed_search_load.clicked.connect(connect_push_button_newsfeed_search_load_1)
-    newsfeed_search[0].pushButton_newsfeed_search_clear.clicked.connect(connect_push_button_newsfeed_search_clear_1)
-    newsfeed_search[0].pushButton_newsfeed_search_save.clicked.connect(connect_push_button_newsfeed_search_save_1)
-    newsfeed_search[1].pushButton_newsfeed_search_load.clicked.connect(connect_push_button_newsfeed_search_load_2)
-    newsfeed_search[1].pushButton_newsfeed_search_clear.clicked.connect(connect_push_button_newsfeed_search_clear_2)
-    newsfeed_search[1].pushButton_newsfeed_search_save.clicked.connect(connect_push_button_newsfeed_search_save_2)
+    main_menu.pushButton_user_file_analyze.clicked.connect(push_button_user_file_analyze)
 
-    photos_search[0].pushButton_photos_search_load.clicked.connect(connect_push_button_photos_search_load_1)
-    photos_search[0].pushButton_photos_search_clear.clicked.connect(connect_push_button_photos_search_clear_1)
-    photos_search[0].pushButton_photos_search_save.clicked.connect(connect_push_button_photos_search_save_1)
-    photos_search[1].pushButton_photos_search_load.clicked.connect(connect_push_button_photos_search_load_2)
-    photos_search[1].pushButton_photos_search_clear.clicked.connect(connect_push_button_photos_search_clear_2)
-    photos_search[1].pushButton_photos_search_save.clicked.connect(connect_push_button_photos_search_save_2)
+    # инициация окна получения ID подписчиков страниц и групп, привязка функций к кнопкам
+    users_get = Ui_MainWindow_Get_Users()
+    WidgetUsersGet = QtWidgets.QMainWindow()
+    users_get.setupUi(WidgetUsersGet)
 
-    friends_get[0].pushButton_friends_get_load.clicked.connect(connect_push_button_friends_get_load_1)
-    friends_get[0].pushButton_friends_get_clear.clicked.connect(connect_push_button_friends_get_clear_1)
-    friends_get[0].pushButton_friends_get_save.clicked.connect(connect_push_button_friends_get_save_1)
-    friends_get[1].pushButton_friends_get_load.clicked.connect(connect_push_button_friends_get_load_2)
-    friends_get[1].pushButton_friends_get_clear.clicked.connect(connect_push_button_friends_get_clear_2)
-    friends_get[1].pushButton_friends_get_save.clicked.connect(connect_push_button_friends_get_save_2)
+    main_menu.pushButton_get_users.clicked.connect(WidgetUsersGet_show)
+    users_get.pushButton_get_users_clear.clicked.connect(push_button_get_users_clear)
+    users_get.pushButton_get_users_save.clicked.connect(push_button_get_users_save)
+    users_get.pushButton_get_users_load.clicked.connect(push_button_get_users_load)
 
-    groups_getMembers[0].pushButton_groups_getMembers_load.clicked.connect(connect_push_button_groups_getMembers_load_1)
-    groups_getMembers[0].pushButton_groups_getMembers_clear.clicked.connect(
-        connect_push_button_groups_getMembers_clear_1)
-    groups_getMembers[0].pushButton_groups_getMembers_save.clicked.connect(connect_push_button_groups_getMembers_save_1)
-    groups_getMembers[1].pushButton_groups_getMembers_load.clicked.connect(connect_push_button_groups_getMembers_load_2)
-    groups_getMembers[1].pushButton_groups_getMembers_clear.clicked.connect(
-        connect_push_button_groups_getMembers_clear_2)
-    groups_getMembers[1].pushButton_groups_getMembers_save.clicked.connect(connect_push_button_groups_getMembers_save_2)
+    # инициация окна поиска постов, привязка функций к кнопкам
+    newsfeed_search = Ui_MainWindow_Newsfeed_Search()
+    WidgetNewsfeedSearch = QtWidgets.QMainWindow()
+    newsfeed_search.setupUi(WidgetNewsfeedSearch)
+
+    main_menu.pushButton_newsfeed_search.clicked.connect(WidgetNewsfeedSearch_show)
+    newsfeed_search.pushButton_newsfeed_search_clear.clicked.connect(push_button_newsfeed_search_clear)
+    newsfeed_search.pushButton_newsfeed_search_save.clicked.connect(push_button_newsfeed_search_save)
+    newsfeed_search.pushButton_newsfeed_search_load.clicked.connect(push_button_newsfeed_search_load)
+
+    # инициация окна поиска фото, привязка функций к кнопкам
+    photos_search = Ui_MainWindow_Photos_Search()
+    WidgetPhotosSearch = QtWidgets.QMainWindow()
+    photos_search.setupUi(WidgetPhotosSearch)
+
+    main_menu.pushButton_photos_search.clicked.connect(WidgetPhotosSearch_show)
+    photos_search.pushButton_photos_search_clear.clicked.connect(push_button_photos_search_clear)
+    photos_search.pushButton_photos_search_save.clicked.connect(push_button_photos_search_save)
+    photos_search.pushButton_photos_search_load.clicked.connect(push_button_photos_search_load)
 
     main_menu.textBrowser.append('Программа "Bigl" ("Бигль") готова к использованию\n'
                                  'Версия - Alpha 0.5\n'

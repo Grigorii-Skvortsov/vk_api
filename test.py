@@ -15,12 +15,3 @@ def unix_to_y_m_d(unix: int) -> dict:
     return {'y': datetime.datetime.fromtimestamp(unix).strftime('%Y'),
             'm': datetime.datetime.fromtimestamp(unix).strftime('%m'),
             'd': datetime.datetime.fromtimestamp(unix).strftime('%d')}
-
-
-d= {
-    '1': 23,
-    '2': 42
-}
-
-for i in d:
-    print(i)
