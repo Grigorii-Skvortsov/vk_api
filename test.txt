@@ -1,0 +1,11 @@
+cmd v papke
+-----
+git status   - pokazat status
+-----
+git add *    - add all files 
+------
+git commit -m "tvoi commentarii k izmeneniem" 
+------
+git push    -  add code to all
+------     
+git pull    - download to me
