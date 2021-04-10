@@ -8,9 +8,12 @@ from ui_window_main import Ui_MainWindow
 from ui_widget_get_users import Ui_MainWindow_Get_Users
 from ui_widget_newsfeed_search import Ui_MainWindow_Newsfeed_Search
 from ui_widget_photos_search import Ui_MainWindow_Photos_Search
+from ui_widget_video_search import Ui_MainWindow_Video_Search
 
-
-global max_one_count, total_max_count, ACCESS_TOKEN, PHOTOS_SEARCH_V, NEWSFEED_SEARCH_V, FRIENDS_GET_V, GROUPS_GETMEMBERS_V, USERS_GET_V, GROUPS_GET_BY_ID_V, USERS_GET_V
+global max_one_count, total_max_count, ACCESS_TOKEN, \
+    PHOTOS_SEARCH_V, NEWSFEED_SEARCH_V, VIDEO_SEARCH_V, \
+    GROUPS_GETMEMBERS_V, FRIENDS_GET_V, USERS_GET_V, GROUPS_GET_BY_ID_V, \
+    start_massage
 
 # open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read() здесь вы указываете путь к своему токену доступа
 ACCESS_TOKEN = open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read()
@@ -19,23 +22,32 @@ max_one_count = {  # максимальное количество в запро
     'newsfeed.search': 200,
     'photos.search': 1000,
     'friends.get': 10000,
+    'video.search': 200,
     'groups.getMembers': 1000,
 }
 
 total_max_count = {  # максимальное количество запросов вообще
     'newsfeed.search': 1000,
     'photos.search': 3000,
+    'video.search': 1000,
     'friends.get': 10000,  # больше 10000 не бывает
     'groups.getMembers': None,  # нет ограничений?
 }
 
 PHOTOS_SEARCH_V = 5.126
+VIDEO_SEARCH_V = 5.58
 NEWSFEED_SEARCH_V = 5.107
-FRIENDS_GET_V = 5.107
-GROUPS_GETMEMBERS_V = 5.107
-USERS_GET_V = 5.107
+FRIENDS_GET_V = 5.21
+GROUPS_GETMEMBERS_V = 5.21
 GROUPS_GET_BY_ID_V = 5.107
 USERS_GET_V = 5.126
+
+start_massage = 'Программа "Bigl" ("Бигль") готова к использованию' \
+                '\nВерсия - beta 1.0\n' \
+                '\nСвязь с автором - \n' \
+                'https://t.me/GregoryValeryS\n' \
+                '\nGNU General Public License v3.0\n'
+
 
 def WidgetUsersGet_show(): WidgetUsersGet.show()
 
@@ -46,6 +58,82 @@ def WidgetNewsfeedSearch_show(): WidgetNewsfeedSearch.show()
 def WidgetPhotosSearch_show(): WidgetPhotosSearch.show()
 
 
+def WidgetVideoSearch_show(): WidgetVideoSearch.show()
+
+
+def push_button_video_search_clear():
+    line_inspector()
+    video_search.lineEdit_video_search_status.setText('Данных нет')
+    clearing_lines = [
+        video_search.lineEdit_video_search_q,
+        video_search.lineEdit_video_search_shorter,
+        video_search.lineEdit_video_search_longer,
+    ]
+    global data
+    data = []
+    for line in clearing_lines:
+        line.clear()
+
+
+def push_button_newsfeed_search_clear():
+    line_inspector()
+    newsfeed_search.lineEdit_newsfeed_search_status.setText('Данных нет')
+    clearing_lines = [
+        newsfeed_search.lineEdit_newsfeed_search_q,
+
+        newsfeed_search.lineEdit_newsfeed_search_latitude,
+        newsfeed_search.lineEdit_newsfeed_search_longitude,
+
+        newsfeed_search.lineEdit_newsfeed_search_start_time_day,
+        newsfeed_search.lineEdit_newsfeed_search_start_time_month,
+        newsfeed_search.lineEdit_newsfeed_search_start_time_year,
+
+        newsfeed_search.lineEdit_newsfeed_search_end_time_day,
+        newsfeed_search.lineEdit_newsfeed_search_end_time_month,
+        newsfeed_search.lineEdit_newsfeed_search_end_time_year,
+    ]
+    global data
+    data = []
+    for line in clearing_lines:
+        line.clear()
+
+
+def push_button_photos_search_clear():
+    line_inspector()
+    photos_search.lineEdit_photos_search_status.setText('Данных нет')
+    clearing_lines = [
+        photos_search.lineEdit_photos_search_q,
+
+        photos_search.lineEdit_photos_search_lat,
+        photos_search.lineEdit_photos_search_long,
+        photos_search.lineEdit_photos_search_radius,
+
+        photos_search.lineEdit_photos_search_start_time_day,
+        photos_search.lineEdit_photos_search_start_time_month,
+        photos_search.lineEdit_photos_search_start_time_year,
+
+        photos_search.lineEdit_photos_search_end_time_day,
+        photos_search.lineEdit_photos_search_end_time_month,
+        photos_search.lineEdit_photos_search_end_time_year,
+    ]
+    global data
+    data = []
+    for line in clearing_lines:
+        line.clear()
+
+
+def push_button_get_users_clear():
+    line_inspector()
+    users_get.lineEdit_get_users_status.setText('Данных нет')
+    clearing_lines = [
+        users_get.lineEdit_get_users_id,
+    ]
+    global data
+    data = []
+    for line in clearing_lines:
+        line.clear()
+
+
 def push_button_get_users_load():
     params = {'access_token': ACCESS_TOKEN}
     id = users_get.lineEdit_get_users_id.text()
@@ -54,20 +142,23 @@ def push_button_get_users_load():
         user_id = int(id)
         params.update({'user_id': user_id})
         params.update({'v': FRIENDS_GET_V})
-        params.update({'fields': 'city, country'})
+        params.update({'order': 'hints'})
+        params.update({'fields': 'maiden_name, nickname, sex, bdate, city, country, connections, contacts, site'})
+
         users_get.lineEdit_get_users_status.setText('Данные выгружены')
 
-        push_button_something_load('friends.get', params)
+        push_button_load('friends.get', params)
 
     elif id != '' and users_get.radioButton_group.isChecked():
 
         group_id = int(id)
         params.update({'group_id': group_id})
         params.update({'v': GROUPS_GETMEMBERS_V})
-        params.update({'fields': 'city, country'})
+        params.update({'fields': 'maiden_name, nickname, sex, bdate, city, country, connections, contacts, site'})
+
         users_get.lineEdit_get_users_status.setText('Данные выгружены')
 
-        push_button_something_load('groups.getMembers', params)
+        push_button_load('groups.getMembers', params)
 
     else:
         users_get.lineEdit_get_users_status.setText('Ошибка запроса')
@@ -123,7 +214,7 @@ def push_button_photos_search_load():
 
         photos_search.lineEdit_photos_search_status.setText('Данные выгружены')
 
-        push_button_something_load('photos.search', params)
+        push_button_load('photos.search', params)
     else:
         photos_search.lineEdit_photos_search_status.setText('Ошибка запроса')
         main_menu.textBrowser.append('Для поиска по фото необходимо указать текст запроса или координаты')
@@ -136,7 +227,8 @@ def push_button_newsfeed_search_load():
         q = str(q)
         params.update({'q': q})
         params.update({'v': NEWSFEED_SEARCH_V})
-        params.update({'extended': 0})  # 1, если необходимо получить информацию о пользователе или сообществе
+        params.update({'extended': 1})  # 1, если необходимо получить информацию о пользователе или сообществе
+        params.update({'fields': 'maiden_name, nickname, sex, bdate, city, country, connections, contacts, site'})
 
         latitude = newsfeed_search.lineEdit_newsfeed_search_latitude.text()
         longitude = newsfeed_search.lineEdit_newsfeed_search_longitude.text()
@@ -167,13 +259,44 @@ def push_button_newsfeed_search_load():
             params.update({'end_time': end_time})
 
         newsfeed_search.lineEdit_newsfeed_search_status.setText('Данные выгружены')
-        push_button_something_load('newsfeed.search', params)
+        push_button_load('newsfeed.search', params)
     else:
         newsfeed_search.lineEdit_newsfeed_search_status.setText('Ошибка запроса')
         main_menu.textBrowser.append('Для поиска по постам необходимо указать текст запроса')
 
 
-def push_button_something_load(request_type: str, params: dict):
+def push_button_video_search_load():
+    pass
+    params = {'access_token': ACCESS_TOKEN}
+    q = video_search.lineEdit_video_search_q.text()
+    if q != '':  # в запросе обязательно должен быть текст
+        q = str(q)
+        params.update({'q': q})
+        params.update({'v': VIDEO_SEARCH_V})
+        params.update({'sort': 0})  # 0 — по дате добавления видеозаписи
+        params.update({'hd': 0})  # если не равен нулю, то поиск производится только по видеозаписям высокого качества
+        params.update({'adult': 1})  # фильтр «Безопасный поиск», 1 — выключен
+        params.update({'search_own': 0})  # 1 — искать по видеозаписям пользователя, 0 — не искать
+        params.update({'extended': 1})
+
+        shorter = video_search.lineEdit_video_search_shorter.text()
+        if shorter != '':
+            shorter = int(shorter)
+            params.update({'shorter': shorter})
+
+        longer = video_search.lineEdit_video_search_longer.text()
+        if longer != '':
+            longer = int(longer)
+            params.update({'longer': longer})
+
+        video_search.lineEdit_video_search_status.setText('Данные выгружены')
+        push_button_load('video.search', params)
+    else:
+        video_search.lineEdit_video_search_status.setText('Ошибка запроса')
+        main_menu.textBrowser.append('Для поиска по видео необходимо указать текст запроса')
+
+
+def push_button_load(request_type: str, params: dict):
     """i - widget number
     request_type - type of search"""
     line_inspector()
@@ -190,14 +313,12 @@ def push_button_something_load(request_type: str, params: dict):
     try:
         one_request = get(f"https://api.vk.com/method/{request_type}?", params=params).json()
     except:
-        main_menu.textBrowser.append(
-            f"Тестовый запрос '{request_type}' вернул ошибку.\n"
-            f"Это может быть по следующим причинам:\n"
-            f"1. Отсутсвует подсоединение к сети;\n"
-            f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
-            f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
-            f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
-        )
+        error_report(f'Тестовый запрос "{request_type}" вернул ошибку.')
+        return None
+    if 'error' in one_request:
+        main_menu.textBrowser.append(f"\nТестовый запрос {request_type} вернул ошибку.\n"
+                                     f"\nerror_code - {one_request['error']['error_code']}"
+                                     f"\nerror_code - {one_request['error']['error_msg']}\n")
         return None
 
     main_menu.textBrowser.append(f"Найдено {one_request['response']['count']} результатов '{request_type}'")
@@ -225,19 +346,14 @@ def push_button_something_load(request_type: str, params: dict):
         black_list = set()
 
     while this_total_max_count > 0:
+
         sleep(0.34)
         try:
             request_json = get(f"https://api.vk.com/method/{request_type}?", params=params).json()
         except:
-            main_menu.textBrowser.append(
-                f"В процессе цикла запросов '{request_type}' возникла ошибка.\n"
-                f"Это может быть по следующим причинам:\n"
-                f"1. Нестабильное подсоединение к сети;\n"
-                f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
-                f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
-                f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
-            )
+            error_report(f'В процессе цикла запросов "{request_type}" возникла ошибка.')
             return None
+
         offset = offset + count
         if request_type == 'newsfeed.search':
             params.update({'start_from': offset})
@@ -248,11 +364,16 @@ def push_button_something_load(request_type: str, params: dict):
 
         # записываем данные в переменную
         if request_type == 'newsfeed.search':
+            check_bl = newsfeed_search.checkBox_bl.isChecked()
+            check_cl = newsfeed_search.checkBox_cl.isChecked()
             for item in request_json['response']['items']:
-                # какие параметры могут отсутствовать?
-                this_id = str(item['owner_id']).replace('-', '')
-                if this_id in black_list:
+
+                # проверка, не является ли владелец группой, нет ли его в черном спсике (при условии филтрации)
+                if '-' in str(item['owner_id']) or (check_bl and str(item['owner_id']) in black_list):
                     continue
+
+                id = str(item['owner_id'])
+
                 this_lat = ''
                 this_long = ''
                 this_place = ''
@@ -272,9 +393,9 @@ def push_button_something_load(request_type: str, params: dict):
                             post_source += ' ' + item["post_source"][key][sub_key]
 
                 data.append(
-                    {'id': this_id,
+                    {'id': id,
                      'link': '=HYPERLINK("{}", "{}")'.format(
-                         f"https://vk.com/id{str(item['owner_id']).replace('-', '')}", 'page link'),
+                         f"https://vk.com/id{id}", 'page link'),
                      'first_name': '',
                      'last_name': '',
                      'content': '',
@@ -290,20 +411,26 @@ def push_button_something_load(request_type: str, params: dict):
                      })
 
         elif request_type == 'photos.search':
+            check_bl = photos_search.checkBox_bl.isChecked()
+            check_cl = photos_search.checkBox_cl.isChecked()
             for item in request_json['response']['items']:
-                # какие параметры могут отсутствовать?
-                this_id = str(item['owner_id']).replace('-', '')
-                if this_id in black_list:
+
+                # проверка, не является ли владелец группой, нет ли его в черном спсике (при условии филтрации)
+                if '-' in str(item['owner_id']) or (check_bl and str(item['owner_id']) in black_list):
                     continue
+
+                id = str(item['owner_id'])
+
                 this_lat = ''
                 this_long = ''
                 if item.get("lat"):
                     this_lat = item["lat"]
                     this_long = item["long"]
+
                 data.append(
-                    {'id': this_id,
+                    {'id': id,
                      'link': '=HYPERLINK("{}", "{}")'.format(
-                         f"https://vk.com/id{str(item['owner_id']).replace('-', '')}", 'page link'),
+                         f"https://vk.com/id{id}", 'page link'),
                      'first_name': '',
                      'last_name': '',
                      'content': '=HYPERLINK("{}", "{}")'.format(str(item['sizes'][-1]['url']), 'photo link'),
@@ -314,101 +441,97 @@ def push_button_something_load(request_type: str, params: dict):
                      })
 
         elif request_type == 'friends.get' or request_type == 'groups.getMembers':
+            check_bl = users_get.checkBox_bl.isChecked()
+            # check_cl = users_get.checkBox_cl.isChecked()
+
             for item in request_json['response']['items']:
-                this_id = str(item['id']).replace('-', '')
-                if this_id in black_list:
+                id = str(item['id'])
+                # в черном спсике?
+                if check_bl and id in black_list:
                     continue
-                this_country = ''
-                this_city = ''
-                if item.get("country"):
-                    this_country = item['country']['title']
-                    if item.get("city"):
-                        this_city = item['city']['title']
+
+                # закрытая страница?
+                # if check_cl and item['is_closed']:
+                #    continue
+
                 data.append(
-                    {'id': this_id,
-                     'link': '=HYPERLINK("{}", "{}")'.format(
-                         f"https://vk.com/id{str(item['id']).replace('-', '')}", 'page link'),
+                    {'id': id,
+                     'link': '=HYPERLINK("{}", "{}")'.format(f"https://vk.com/id{id}", 'page link'),
                      'first_name': item['first_name'],
                      'last_name': item['last_name'],
-                     'country': this_country,
-                     'city': this_city,
+                     "nickname": item["nickname"] if "nickname" in item else '',
+                     "maiden_name": item["maiden_name"] if "maiden_name" in item else '',
+                     "is_closed": int(item["is_closed"]) if "is_closed" in item else '',
+
+                     "sex": item["sex"] if "sex" in item else '',
+
+                     "bdate": item["bdate"] if "bdate" in item else '',
+
+                     "city": item["city"]["title"] if "city" in item and "title" in item["city"] else '',
+                     "country": item["country"]["title"] if "country" in item and "title" in item["country"] else '',
+
+                     "facebook": item["facebook"] if "facebook" in item else '',
+                     "facebook_name": item["facebook_name"] if "facebook_name" in item else '',
+                     "twitter": item["twitter"] if "twitter" in item else '',
+                     "instagram": item["instagram"] if "instagram" in item else '',
+                     "skype": item["skype"] if "skype" in item else '',
+                     "livejournal": item["livejournal"] if "livejournal" in item else '',
+
+                     "phones": phones_stringer([
+                         item["mobile_phone"] if "mobile_phone" in item else '',
+                         item["home_phone"] if "home_phone" in item else ''
+                     ]),
+
+                     "site": item["site"] if "site" in item else '',
                      })
 
-    main_menu.textBrowser.append(f"{len(data)} результатов поиска загружено. Сохранить?")
+        elif request_type == 'video.search':
+            check_bl = video_search.checkBox_bl.isChecked()
+            check_cl = video_search.checkBox_cl.isChecked()
+            for item in request_json['response']['items']:
+                # проверка, не является ли владелец группой, нет ли его в черном спсике (при условии филтрации)
+                if '-' in str(item['owner_id']) or (check_bl and str(item['owner_id']) in black_list):
+                    continue
+
+                id = str(item['owner_id'])
+                # определение данных пользователя
+
+                for profile in request_json['response']['profiles']:
+                    if check_cl and profile['is_closed']:
+                        continue
+                    elif profile['id'] == id:
+                        first_name = profile['id']['first_name']
+                        last_name = profile['id']['last_name']
+
+                data.append(
+                    {'id': id,
+                     'link': '=HYPERLINK("{}", "{}")'.format(f"https://vk.com/id{id}", 'page link'),
+                     'first_name': first_name,
+                     'last_name': last_name,
+                     'content': item['player'],
+                     'date': unix_to_d_m_y_str(item['date']),
+                     'duration': item['duration'],
+                     'likes': item['likes']['count'],
+                     'comments': item['comments'],
+                     'title': item['title'],
+                     'description': item['description']
+                     })
+
+    response_save(request_type)
 
 
-def push_button_newsfeed_search_clear():
-    line_inspector()
-    newsfeed_search.lineEdit_newsfeed_search_status.setText('Данных нет')
-    clearing_lines = [
-        newsfeed_search.lineEdit_newsfeed_search_q,
-
-        newsfeed_search.lineEdit_newsfeed_search_latitude,
-        newsfeed_search.lineEdit_newsfeed_search_longitude,
-
-        newsfeed_search.lineEdit_newsfeed_search_start_time_day,
-        newsfeed_search.lineEdit_newsfeed_search_start_time_month,
-        newsfeed_search.lineEdit_newsfeed_search_start_time_year,
-
-        newsfeed_search.lineEdit_newsfeed_search_end_time_day,
-        newsfeed_search.lineEdit_newsfeed_search_end_time_month,
-        newsfeed_search.lineEdit_newsfeed_search_end_time_year,
-    ]
-    data = []
-    for line in clearing_lines:
-        line.clear()
-
-
-def push_button_photos_search_clear():
-    line_inspector()
-    photos_search.lineEdit_photos_search_status.setText('Данных нет')
-    clearing_lines = [
-        photos_search.lineEdit_photos_search_q,
-
-        photos_search.lineEdit_photos_search_lat,
-        photos_search.lineEdit_photos_search_long,
-        photos_search.lineEdit_photos_search_radius,
-
-        photos_search.lineEdit_photos_search_start_time_day,
-        photos_search.lineEdit_photos_search_start_time_month,
-        photos_search.lineEdit_photos_search_start_time_year,
-
-        photos_search.lineEdit_photos_search_end_time_day,
-        photos_search.lineEdit_photos_search_end_time_month,
-        photos_search.lineEdit_photos_search_end_time_year,
-    ]
-    data = []
-    for line in clearing_lines:
-        line.clear()
-
-
-def push_button_get_users_clear():
-    line_inspector()
-    users_get.lineEdit_get_users_status.setText('Данных нет')
-    clearing_lines = [
-        users_get.lineEdit_get_users_id,
-    ]
-    data = []
-    for line in clearing_lines:
-        line.clear()
-
-
-def push_button_get_users_save(): push_button_something_save('get.users')
-
-
-def push_button_photos_search_save(): push_button_something_save('photos.search')
-
-
-def push_button_newsfeed_search_save(): push_button_something_save('newsfeed.search')
-
-
-def push_button_something_save(window_type: str):
+def response_save(window_type: str):
     """i - widget number
     window_type - type of window"""
     line_inspector()
+
+    if window_type == 'friends.get' or window_type == 'groups.getMembers':
+        window_type = 'get.users'
+
     status_line = {
         'newsfeed.search': newsfeed_search.lineEdit_newsfeed_search_status,
         'photos.search': photos_search.lineEdit_photos_search_status,
+        'video.search': video_search.lineEdit_video_search_status,
         'get.users': users_get.lineEdit_get_users_status,
     }
 
@@ -416,6 +539,7 @@ def push_button_something_save(window_type: str):
         file_name = {
             'newsfeed.search': newsfeed_search.lineEdit_newsfeed_search_file_name.text(),
             'photos.search': photos_search.lineEdit_photos_search_file_name.text(),
+            'video.search': video_search.lineEdit_video_search_file_name.text(),
             'get.users': users_get.lineEdit_get_users_file_name.text(),
         }
 
@@ -425,62 +549,78 @@ def push_button_something_save(window_type: str):
             data_frame.to_excel(this_name, index=False)  # перезаписываем файл в excel
 
             status_line[window_type].setText('Записано в файл')
-            main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data)} id")
+            main_menu.textBrowser.append(f"\nВ файл '{this_name}' сохранено {len(data)} id")
         except:
             status_line[window_type].setText('Ошибка!')
-            main_menu.textBrowser.append(f"При сохранении файла '{this_name}' произошла ошибка!\n"
+            main_menu.textBrowser.append(f"\nПри сохранении файла '{this_name}' произошла ошибка!\n"
                                          f"- Файл не должен быть открыт во время сохранения\n"
                                          f"- Работа гарантирована на современных версиях Windows")
     else:
         pass
 
 
-def push_button_get_group_id():
+def push_button_get_id():
     line_inspector()
-    if main_menu.lineEdit_get_group_id_txt_id.text() != '':
-        params = {
-            'access_token': ACCESS_TOKEN,
-            'v': GROUPS_GET_BY_ID_V,
-            'group_ids': main_menu.lineEdit_get_group_id_txt_id.text()
-        }
-        sleep(0.34)
-        try:
-            main_menu.lineEdit_get_group_id_id.setText(str(get(f"https://api.vk.com/method/groups.getById?",
-                                                               params=params).json()['response'][0]['id']))
-        except:
-            main_menu.textBrowser.append(
-                f"Запрос получеия ID группы '{params['group_ids']}' вернул ошибку.\n"
-                f"Это может быть по следующим причинам:\n"
-                f"1. Отсутсвует подсоединение к сети;\n"
-                f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
-                f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
-                f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
-            )
-            return None
-
-
-def push_button_get_user_id():
-    line_inspector()
-    if main_menu.lineEdit_get_user_id_txt_id.text() != '':
+    name = main_menu.lineEdit_get_id_txt.text()
+    if name != '':
         params = {
             'access_token': ACCESS_TOKEN,
             'v': USERS_GET_V,
-            'user_ids': main_menu.lineEdit_get_user_id_txt_id.text()
+            'user_ids': name
         }
         sleep(0.34)
         try:
-            main_menu.lineEdit_get_user_id_id.setText(str(get(f"https://api.vk.com/method/users.get?",
-                                                              params=params).json()['response'][0]['id']))
+            main_menu.lineEdit_get_id_id.setText(str(get(f"https://api.vk.com/method/users.get?",
+                                                         params=params).json()['response'][0]['id']))
         except:
-            main_menu.textBrowser.append(
-                f"Запрос получеия ID пользователя '{params['user_ids']}' вернул ошибку.\n"
-                f"Это может быть по следующим причинам:\n"
-                f"1. Отсутсвует подсоединение к сети;\n"
-                f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
-                f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
-                f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
-            )
-            return None
+            params = {
+                'access_token': ACCESS_TOKEN,
+                'v': GROUPS_GET_BY_ID_V,
+                'group_ids': name
+            }
+            sleep(0.34)
+            try:
+                main_menu.lineEdit_get_id_id.setText(str(get(f"https://api.vk.com/method/groups.getById?",
+                                                             params=params).json()['response'][0]['id']))
+            except:
+                main_menu.lineEdit_get_id_id.clear()
+                error_report(f'Запрос получения ID "{name}" вернул ошибку.')
+                return None
+
+
+def error_report(first_line: str):
+    main_menu.textBrowser.append(
+        f"{first_line}\n"
+        f"Это может быть по следующим причинам:\n"
+        f"1. Отсутсвует подсоединение к сети;\n"
+        f"2. Истёк ключ доступа - обратитесь к разработчику;\n"
+        f"3. Изменились настройки VK API - обратитесь к разработчику;\n"
+        f"4. Неправильное заполнение формы - проверьте верность форматов заполнения.\n"
+    )
+
+
+def phones_stringer(maybe_phones_list: list):
+    """поулчает список строк с возможными номерами телефонов
+    возвращает строку с записанными номерами через пробел"""
+    for i in range(len(maybe_phones_list)):
+
+        if '.0' in maybe_phones_list[i][-2:]:
+            maybe_phones_list[i] = maybe_phones_list[i][0:-2]
+
+        phone_ram = str(maybe_phones_list[i])
+        maybe_phones_list[i] = ''
+        for p_chr in phone_ram:
+            if p_chr.isdigit():
+                maybe_phones_list[i] += p_chr
+
+    phones_set = set()
+    for phone in maybe_phones_list:
+        if len(phone) == 11 and (phone[0] == '7' or phone[0] == '8'):
+            phone = phone[1:]
+        if (len(phone) == 10 and phone[0] == '9') or len(phone) == 6:
+            phones_set.add(phone)
+
+    return ','.join(phones_set)
 
 
 def push_button_user_file_analyze():
@@ -489,8 +629,12 @@ def push_button_user_file_analyze():
 
     file_to_analyze = f'{main_menu.lineEdit_user_file_analyze.text().replace(".xlsx", "")}.xlsx'
 
-    data_dicts = read_excel(file_to_analyze).to_dict(orient='records')
-
+    try:
+        data_dicts = read_excel(file_to_analyze).to_dict(orient='records')
+    except:
+        main_menu.textBrowser.append(
+            f"Файл '{file_to_analyze}' отсутсвует в директории программы или имеет неподходящий формат.\n")
+        return None
 
     id_set = set()
     for dict in data_dicts:
@@ -517,13 +661,13 @@ def push_button_user_file_analyze():
             'fields': 'maiden_name, nickname, sex, bdate, city, country, connections, contacts, site',
         })
         sleep(0.34)
-        print('Запрос!')
+
         response = get("https://api.vk.com/method/users.get?", params=params).json()
 
         for user in response['response']:
-
             data_dicts.append({
                 "id": user["id"],
+                "link": '=HYPERLINK("{}", "{}")'.format(f"https://vk.com/id{user['id']}", 'page link'),
                 "first_name": user["first_name"],
                 "last_name": user["last_name"],
                 "nickname": user["nickname"] if "nickname" in user else '',
@@ -544,8 +688,10 @@ def push_button_user_file_analyze():
                 "skype": user["skype"] if "skype" in user else '',
                 "livejournal": user["livejournal"] if "livejournal" in user else '',
 
-                "mobile_phone": user["mobile_phone"] if "mobile_phone" in user else '',
-                "home_phone": user["home_phone"] if "home_phone" in user else '',
+                "phones": phones_stringer([
+                    user["mobile_phone"] if "mobile_phone" in user else '',
+                    user["home_phone"] if "home_phone" in user else ''
+                ]),
 
                 "site": user["site"] if "site" in user else '',
             })
@@ -557,11 +703,11 @@ def push_button_user_file_analyze():
     main_menu.textBrowser.append(f"В файл '{this_name}' сохранено {len(data_dicts)} записей")
 
 
-def push_button_find_intersections_search():
+def push_button_intersection():
     line_inspector()
     pass
-    first_file_name = main_menu.lineEdit_find_intersections_file_1.text()
-    second_file_name = main_menu.lineEdit_find_intersections_file_2.text()
+    first_file_name = f'{main_menu.lineEdit_manipulation_file_1.text().replace(".xlsx", "")}.xlsx'
+    second_file_name = f'{main_menu.lineEdit_manipulation_file_2.text().replace(".xlsx", "")}.xlsx'
     if first_file_name != '' and second_file_name != '':
         try:
             with open(first_file_name) as first_file:
@@ -597,41 +743,15 @@ def push_button_find_intersections_search():
         intersection_set = (first_set & second_set) - this_black_list
         main_menu.textBrowser.append(f"В '{first_file_name}' и '{second_file_name}' найдено {len(intersection_set)} "
                                      f"пересечений.\n")
-
-        main_menu.lineEdit_find_intersections_status.setText('Отфильтрованно')
     else:
         main_menu.textBrowser.append(f"Впишите в поля полные имена csv-файлов для фильтрации, например 'test.csv'.\n")
-        main_menu.lineEdit_find_intersections_status.setText('Укажите файлы!')
 
 
-def push_button_find_intersections_save():
-    pass
-    push_button_find_intersections_search()
-    global intersection_set
-    if intersection_set:
-        this_name = f"{main_menu.lineEdit_file_name.text()}_intersections.csv"
-        with open(this_name, 'w') as file:
-            for id in intersection_set:
-                file.write(str(id).replace('-', '') + '\n')
-        main_menu.textBrowser.append(f"{len(intersection_set)} id сохранено в '{this_name}'")
-    else:
-        main_menu.textBrowser.append(f"Впишите в поля полные имена csv-файлов для фильтрации, например 'test.csv'.\n")
-        main_menu.lineEdit_find_intersections_status.setText('Нет данных!')
-
-
-def push_button_find_intersections_clear():
-    line_inspector()
-    main_menu.lineEdit_find_intersections_file_1.clear()
-    main_menu.lineEdit_find_intersections_file_2.clear()
-    global intersection_set
-    intersection_set = set()
-
-
-def push_button_integration_find():
+def push_button_integration():
     line_inspector()
     pass
-    first_file_name = main_menu.lineEdit_integration_file_1.text()
-    second_file_name = main_menu.lineEdit_integration_file_2.text()
+    first_file_name = f'{main_menu.lineEdit_manipulation_file_1.text().replace(".xlsx", "")}.xlsx'
+    second_file_name = f'{main_menu.lineEdit_manipulation_file_2.text().replace(".xlsx", "")}.xlsx'
     if first_file_name != '' and second_file_name != '':
         try:
             with open(first_file_name) as first_file:
@@ -668,33 +788,89 @@ def push_button_integration_find():
         main_menu.textBrowser.append(f"Файлы '{first_file_name}' и '{second_file_name}' объединены во множество "
                                      f"длинной {len(integration_set)} элементов.\n")
 
-        main_menu.lineEdit_integration_status.setText('Объединено')
     else:
         main_menu.textBrowser.append(f"Впишите в поля полные имена csv-файлов для объединения, например 'test.csv'.\n")
-        main_menu.lineEdit_integration_status.setText('Укажите файлы!')
 
 
-def push_button_integration_save():
-    push_button_integration_find()
-    pass
-    global integration_set
-    if integration_set:
-        this_name = f"{main_menu.lineEdit_integration_file_name.text()}_integration.csv"
-        with open(this_name, 'w') as file:
-            for id in integration_set:
-                file.write(str(id).replace('-', '') + '\n')
-        main_menu.textBrowser.append(f"{len(integration_set)} id сохранено в '{this_name}'")
-    else:
-        main_menu.textBrowser.append(f"Впишите в поля полные имена csv-файлов для объединения, например 'test.csv'.\n")
-        main_menu.lineEdit_integration_status.setText('Нет данных!')
+def push_button_identification():
+    first_file_name = f'{main_menu.lineEdit_manipulation_file_1.text().replace(".xlsx", "")}.xlsx'
+    second_file_name = f'{main_menu.lineEdit_manipulation_file_2.text().replace(".xlsx", "")}.xlsx'
 
+    if first_file_name != '' and second_file_name != '':
+        try:
+            first_data_dicts = read_excel(first_file_name).to_dict(orient='records')
 
-def push_button_integration_clear():
-    line_inspector()
-    main_menu.lineEdit_integration_file_1.clear()
-    main_menu.lineEdit_integration_file_2.clear()
-    global integration_set
-    integration_set = set()
+            for i in range(len(first_data_dicts)):
+                first_data_dicts[i]['phones'] = phones_stringer(str(first_data_dicts[i]['phones']).split(','))
+
+            data_frame = DataFrame.from_dict(first_data_dicts)  # преобразовываем в data frame
+            data_frame.to_excel(first_file_name, index=False)  # перезаписываем файл в excel
+            main_menu.textBrowser.append(f"Файл '{first_file_name}' перезаписан")
+
+        except:
+            main_menu.textBrowser.append(
+                f"Файл '{first_file_name}' отсутсвует в директории программы или имеет неподходящий формат.\n")
+            return None
+        try:
+            second_data_dicts = read_excel(second_file_name).to_dict(orient='records')
+            for i in range(len(second_data_dicts)):
+                second_data_dicts[i]['phones'] = phones_stringer(str(second_data_dicts[i]['phones']).split(','))
+
+            data_frame = DataFrame.from_dict(second_data_dicts)  # преобразовываем в data frame
+            data_frame.to_excel(second_file_name, index=False)  # перезаписываем файл в excel
+            main_menu.textBrowser.append(f"Файл '{second_file_name}' перезаписан")
+
+        except:
+            main_menu.textBrowser.append(
+                f"Файл '{second_file_name}' отсутсвует в директории программы или имеет неподходящий формат.\n")
+            return None
+
+        attributes_pairs = [
+            ('first_name', 'last_name'),
+            ('first_name', 'nickname'),
+            ('last_name', 'nickname'),
+            ('last_name', 'bdate'),
+        ]
+
+        set_attributes_list = [
+            'phones'
+        ]
+
+        for i in range(len(first_data_dicts)):
+            for pair in attributes_pairs:
+
+                key_ram = f'{pair[0]}_{pair[1]}'
+
+                first_data_dicts[i].update({key_ram: []})
+                for person in second_data_dicts:
+                    if (str(first_data_dicts[i][pair[0]]) in str(person[pair[0]])
+                        or str(first_data_dicts[i][pair[0]]) in str(person[pair[0]])) \
+                            and (str(first_data_dicts[i][pair[1]]) in str(person[pair[1]])
+                                 or str(first_data_dicts[i][pair[1]]) in str(person[pair[1]])) \
+                            and str(first_data_dicts[i][pair[0]]) != '' and str(first_data_dicts[i][pair[0]]) != '' \
+                            and str(person[pair[0]]) != '' and str(person[pair[1]]) != '':
+                        first_data_dicts[i][key_ram].append(str(person['id']))
+                first_data_dicts[i][key_ram] = ','.join(first_data_dicts[i][key_ram])
+
+            for set_attribute in set_attributes_list:
+
+                key_ram = f'{set_attribute}_intersect'
+
+                first_set = set(first_data_dicts[i][set_attribute].split(','))
+
+                first_data_dicts[i].update({key_ram: []})
+                for person in second_data_dicts:
+                    person_set = set(person[set_attribute].split(','))
+                    intersect_set = first_set & person_set
+                    if intersect_set and str(first_data_dicts[i][set_attribute]) != '' and str(
+                            person[set_attribute]) != '':
+                        first_data_dicts[i][key_ram].append(str(person['id']))
+                first_data_dicts[i][key_ram] = ','.join(first_data_dicts[i][key_ram])
+
+        new_file_name = f'{first_file_name.replace(".xlsx", "")}_identification.xlsx'
+        data_frame = DataFrame.from_dict(first_data_dicts)  # преобразовываем в data frame
+        data_frame.to_excel(new_file_name, index=False)  # перезаписываем файл в excel
+        main_menu.textBrowser.append(f"Файл '{new_file_name}' записан")
 
 
 def push_button_black_list_add():
@@ -768,8 +944,7 @@ def line_inspector():
     # список полей, где могут быть только целые числа
     only_integro_lines_list = [
         main_menu.lineEdit_black_list_object,
-        main_menu.lineEdit_get_group_id_id,
-        main_menu.lineEdit_get_user_id_id,
+        main_menu.lineEdit_get_id_id,
 
         newsfeed_search.lineEdit_newsfeed_search_start_time_day,
         newsfeed_search.lineEdit_newsfeed_search_start_time_month,
@@ -799,16 +974,10 @@ def line_inspector():
 
     # список полей, где не должно быть пробелов
     text_lines_without_spaces = [
-        main_menu.lineEdit_get_group_id_txt_id,
-        main_menu.lineEdit_get_user_id_txt_id,
+        main_menu.lineEdit_get_id_txt,
 
-        main_menu.lineEdit_find_intersections_file_1,
-        main_menu.lineEdit_find_intersections_file_2,
-        main_menu.lineEdit_file_name,
-
-        main_menu.lineEdit_integration_file_1,
-        main_menu.lineEdit_integration_file_2,
-        main_menu.lineEdit_integration_file_name,
+        main_menu.lineEdit_manipulation_file_1,
+        main_menu.lineEdit_manipulation_file_2,
 
         newsfeed_search.lineEdit_newsfeed_search_file_name,
 
@@ -866,7 +1035,8 @@ def main():
     global main_menu, data, \
         users_get, WidgetUsersGet, \
         newsfeed_search, WidgetNewsfeedSearch, \
-        photos_search, WidgetPhotosSearch
+        photos_search, WidgetPhotosSearch, \
+        video_search, WidgetVideoSearch
 
     data = []
     app = QtWidgets.QApplication(sys_argv)  # Create application - инициализация приложения
@@ -877,16 +1047,11 @@ def main():
 
     MainWindow.show()
 
-    main_menu.pushButton_get_group_id.clicked.connect(push_button_get_group_id)
-    main_menu.pushButton_get_user_id.clicked.connect(push_button_get_user_id)
+    main_menu.pushButton_get_id.clicked.connect(push_button_get_id)
 
-    main_menu.pushButton_find_intersections_search.clicked.connect(push_button_find_intersections_search)
-    main_menu.pushButton_find_intersections_clear.clicked.connect(push_button_find_intersections_clear)
-    main_menu.pushButton_find_intersections_save.clicked.connect(push_button_find_intersections_save)
-
-    main_menu.pushButton_integration_find.clicked.connect(push_button_integration_find)
-    main_menu.pushButton_integration_clear.clicked.connect(push_button_integration_clear)
-    main_menu.pushButton_integration_save.clicked.connect(push_button_integration_save)
+    main_menu.pushButton_manipulation_intersection.clicked.connect(push_button_intersection)
+    main_menu.pushButton_manipulation_integration.clicked.connect(push_button_integration)
+    main_menu.pushButton_manipulation_identification.clicked.connect(push_button_identification)
 
     main_menu.pushButton_black_list_add.clicked.connect(push_button_black_list_add)
     main_menu.pushButton_black_list_seize.clicked.connect(push_button_black_list_seize)
@@ -901,7 +1066,6 @@ def main():
 
     main_menu.pushButton_get_users.clicked.connect(WidgetUsersGet_show)
     users_get.pushButton_get_users_clear.clicked.connect(push_button_get_users_clear)
-    users_get.pushButton_get_users_save.clicked.connect(push_button_get_users_save)
     users_get.pushButton_get_users_load.clicked.connect(push_button_get_users_load)
 
     # инициация окна поиска постов, привязка функций к кнопкам
@@ -911,7 +1075,6 @@ def main():
 
     main_menu.pushButton_newsfeed_search.clicked.connect(WidgetNewsfeedSearch_show)
     newsfeed_search.pushButton_newsfeed_search_clear.clicked.connect(push_button_newsfeed_search_clear)
-    newsfeed_search.pushButton_newsfeed_search_save.clicked.connect(push_button_newsfeed_search_save)
     newsfeed_search.pushButton_newsfeed_search_load.clicked.connect(push_button_newsfeed_search_load)
 
     # инициация окна поиска фото, привязка функций к кнопкам
@@ -921,13 +1084,18 @@ def main():
 
     main_menu.pushButton_photos_search.clicked.connect(WidgetPhotosSearch_show)
     photos_search.pushButton_photos_search_clear.clicked.connect(push_button_photos_search_clear)
-    photos_search.pushButton_photos_search_save.clicked.connect(push_button_photos_search_save)
     photos_search.pushButton_photos_search_load.clicked.connect(push_button_photos_search_load)
 
-    main_menu.textBrowser.append('Программа "Bigl" ("Бигль") готова к использованию\n'
-                                 'Версия - Alpha 0.5\n'
-                                 'Связь с автором - GregoryValeryS@gmail.com\n'
-                                 'GNU General Public License v3.0\n')
+    # инициация окна поиска фото, привязка функций к кнопкам
+    video_search = Ui_MainWindow_Video_Search()
+    WidgetVideoSearch = QtWidgets.QMainWindow()
+    video_search.setupUi(WidgetVideoSearch)
+
+    main_menu.pushButton_video_search.clicked.connect(WidgetVideoSearch_show)
+    video_search.pushButton_video_search_clear.clicked.connect(push_button_video_search_clear)
+    video_search.pushButton_video_search_load.clicked.connect(push_button_video_search_load)
+
+    main_menu.textBrowser.append(start_massage)
 
     sys_exit(app.exec_())  # Run main loop
 

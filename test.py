@@ -1,3 +1,5 @@
+from pandas import DataFrame, read_excel
+
 def write_json_in_file(data):
     """функция получет json-данные и записывает их в файл data.json"""
     with open('data.json', 'w') as file:  # создаём/открываем файл data
@@ -15,3 +17,6 @@ def unix_to_y_m_d(unix: int) -> dict:
     return {'y': datetime.datetime.fromtimestamp(unix).strftime('%Y'),
             'm': datetime.datetime.fromtimestamp(unix).strftime('%m'),
             'd': datetime.datetime.fromtimestamp(unix).strftime('%d')}
+
+
+
