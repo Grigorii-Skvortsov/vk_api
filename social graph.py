@@ -5,7 +5,7 @@ import networkx as nx
 from IPython.display import Image
 import matplotlib.pyplot as plt
 
-ACCESS_TOKEN = open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read()
+ACCESS_TOKEN = open('token.txt').read()
 max_one_count = {  # максимальное количество в запросов за раз
     'newsfeed.search': 200,
     'photos.search': 1000,

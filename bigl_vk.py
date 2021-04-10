@@ -16,7 +16,7 @@ global max_one_count, total_max_count, ACCESS_TOKEN, \
     start_massage
 
 # open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read() здесь вы указываете путь к своему токену доступа
-ACCESS_TOKEN = open('C:/Google Drive/program/matirials_for_vk_api/token.txt').read()
+ACCESS_TOKEN = open('token.txt').read()
 
 max_one_count = {  # максимальное количество в запросов за раз
     'newsfeed.search': 200,
